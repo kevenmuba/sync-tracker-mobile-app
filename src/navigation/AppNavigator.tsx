@@ -9,7 +9,7 @@ import MainTabNavigator from './MainTabNavigator';
 export type RootStackParamList = {
     Login: undefined;
     Register: undefined;
-    Home: undefined; // This now points to MainTabNavigator
+    Dashboard: undefined; // Points to MainTabNavigator (renamed to avoid duplicate 'Home')
 };
 
 const Stack = createNativeStackNavigator<RootStackParamList>();
@@ -26,7 +26,7 @@ export default function AppNavigator() {
                 <Stack.Screen name="Login" component={LoginScreen} />
                 <Stack.Screen name="Register" component={RegisterScreen} />
                 <Stack.Screen
-                    name="Home"
+                    name="Dashboard"
                     component={MainTabNavigator}
                     options={{ headerShown: false }}
                 />

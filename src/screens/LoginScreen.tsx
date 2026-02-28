@@ -76,7 +76,7 @@ export default function LoginScreen({ navigation }: Props) {
                             />
                         </View>
 
-                        <TouchableOpacity onPress={() => navigation.navigate('Home')} activeOpacity={0.8}>
+                        <TouchableOpacity onPress={() => navigation.navigate('Dashboard')} activeOpacity={0.8}>
                             <LinearGradient
                                 colors={['#EA580C', '#F97316']}
                                 start={{ x: 0, y: 0 }}
