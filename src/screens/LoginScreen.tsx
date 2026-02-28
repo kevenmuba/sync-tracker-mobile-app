@@ -3,6 +3,7 @@ import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { LinearGradient } from 'expo-linear-gradient';
 import React, { useState } from 'react';
 import {
+    ActivityIndicator,
     KeyboardAvoidingView,
     Platform,
     ScrollView,
@@ -12,6 +13,7 @@ import {
     TouchableOpacity,
     View,
 } from 'react-native';
+import { supabase } from '../lib/supabase';
 import { RootStackParamList } from '../navigation/AppNavigator';
 
 type Props = {
@@ -21,16 +23,71 @@ type Props = {
 export default function LoginScreen({ navigation }: Props) {
     const [email, setEmail] = useState('');
     const [password, setPassword] = useState('');
+    const [loading, setLoading] = useState(false);
+    const [error, setError] = useState('');
+    const [showPassword, setShowPassword] = useState(false);
+
+    const validateInputs = (): string | null => {
+        if (!email.trim()) return 'Email address is required.';
+        if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email.trim()))
+            return 'Please enter a valid email address.';
+        if (!password) return 'Password is required.';
+        if (password.length < 6)
+            return 'Password must be at least 6 characters.';
+        return null;
+    };
+
+    const handleLogin = async () => {
+        setError('');
+        const validationError = validateInputs();
+        if (validationError) {
+            setError(validationError);
+            return;
+        }
+
+        setLoading(true);
+        try {
+            const { data, error: authError } = await supabase.auth.signInWithPassword({
+                email: email.trim().toLowerCase(),
+                password,
+            });
+
+            if (authError) {
+                // Map Supabase error codes to friendly messages
+                if (authError.message.toLowerCase().includes('invalid login credentials')) {
+                    setError('Incorrect email or password. Please try again.');
+                } else if (authError.message.toLowerCase().includes('email not confirmed')) {
+                    setError('Please confirm your email before logging in. Check your inbox.');
+                } else if (authError.message.toLowerCase().includes('too many requests')) {
+                    setError('Too many attempts. Please wait a few minutes and try again.');
+                } else {
+                    setError(authError.message);
+                }
+                return;
+            }
+
+            if (data.session) {
+                navigation.navigate('Dashboard');
+            }
+        } catch (err) {
+            setError('Something went wrong. Please check your connection and try again.');
+        } finally {
+            setLoading(false);
+        }
+    };
 
     return (
-        <View style={styles.gradientBackground}>
+        <View style={styles.background}>
             <KeyboardAvoidingView
                 style={styles.container}
                 behavior={Platform.OS === 'ios' ? 'padding' : undefined}
             >
-                <ScrollView contentContainerStyle={styles.scrollContent} showsVerticalScrollIndicator={false}>
-
-                    {/* Header Section */}
+                <ScrollView
+                    contentContainerStyle={styles.scrollContent}
+                    showsVerticalScrollIndicator={false}
+                    keyboardShouldPersistTaps="handled"
+                >
+                    {/* Header */}
                     <View style={styles.headerContainer}>
                         <LinearGradient
                             colors={['#EA580C', '#F97316']}
@@ -44,18 +101,27 @@ export default function LoginScreen({ navigation }: Props) {
                         <Text style={styles.subtitle}>Synchronize your productivity flow</Text>
                     </View>
 
-                    {/* Form Section */}
+                    {/* Error Banner */}
+                    {error ? (
+                        <View style={styles.errorBanner}>
+                            <Ionicons name="alert-circle" size={18} color="#DC2626" />
+                            <Text style={styles.errorText}>{error}</Text>
+                        </View>
+                    ) : null}
+
+                    {/* Form */}
                     <View style={styles.formContainer}>
                         <View style={styles.inputGroup}>
                             <Text style={styles.label}>Email Address</Text>
                             <TextInput
-                                style={styles.input}
+                                style={[styles.input, error && !password ? styles.inputError : null]}
                                 placeholder="name@company.com"
                                 placeholderTextColor="#9CA3AF"
                                 value={email}
-                                onChangeText={setEmail}
+                                onChangeText={(t) => { setEmail(t); setError(''); }}
                                 keyboardType="email-address"
                                 autoCapitalize="none"
+                                autoCorrect={false}
                             />
                         </View>
 
@@ -66,24 +132,44 @@ export default function LoginScreen({ navigation }: Props) {
                                     <Text style={styles.forgotPassword}>Forgot Password?</Text>
                                 </TouchableOpacity>
                             </View>
-                            <TextInput
-                                style={styles.input}
-                                placeholder="••••••••"
-                                placeholderTextColor="#9CA3AF"
-                                value={password}
-                                onChangeText={setPassword}
-                                secureTextEntry
-                            />
+                            <View style={styles.passwordInputWrapper}>
+                                <TextInput
+                                    style={[styles.input, styles.passwordInput]}
+                                    placeholder="••••••••"
+                                    placeholderTextColor="#9CA3AF"
+                                    value={password}
+                                    onChangeText={(t) => { setPassword(t); setError(''); }}
+                                    secureTextEntry={!showPassword}
+                                />
+                                <TouchableOpacity
+                                    style={styles.eyeIcon}
+                                    onPress={() => setShowPassword(!showPassword)}
+                                >
+                                    <Ionicons
+                                        name={showPassword ? 'eye-off-outline' : 'eye-outline'}
+                                        size={20}
+                                        color="#9CA3AF"
+                                    />
+                                </TouchableOpacity>
+                            </View>
                         </View>
 
-                        <TouchableOpacity onPress={() => navigation.navigate('Dashboard')} activeOpacity={0.8}>
+                        <TouchableOpacity
+                            onPress={handleLogin}
+                            activeOpacity={0.85}
+                            disabled={loading}
+                        >
                             <LinearGradient
                                 colors={['#EA580C', '#F97316']}
                                 start={{ x: 0, y: 0 }}
                                 end={{ x: 1, y: 0 }}
-                                style={styles.primaryButton}
+                                style={[styles.primaryButton, loading && styles.buttonDisabled]}
                             >
-                                <Text style={styles.primaryButtonText}>Login</Text>
+                                {loading ? (
+                                    <ActivityIndicator color="#FFFFFF" />
+                                ) : (
+                                    <Text style={styles.primaryButtonText}>Login</Text>
+                                )}
                             </LinearGradient>
                         </TouchableOpacity>
 
@@ -102,11 +188,9 @@ export default function LoginScreen({ navigation }: Props) {
                         </TouchableOpacity>
                     </View>
 
-                    {/* Footer Section */}
                     <View style={styles.footerContainer}>
-                        <Text style={styles.footerText}>© 2023 SyncTracker Inc. All rights reserved.</Text>
+                        <Text style={styles.footerText}>© 2025 SyncTracker Inc. All rights reserved.</Text>
                     </View>
-
                 </ScrollView>
             </KeyboardAvoidingView>
         </View>
@@ -114,7 +198,7 @@ export default function LoginScreen({ navigation }: Props) {
 }
 
 const styles = StyleSheet.create({
-    gradientBackground: {
+    background: {
         flex: 1,
         backgroundColor: '#F4F6F9',
     },
@@ -130,7 +214,7 @@ const styles = StyleSheet.create({
     },
     headerContainer: {
         alignItems: 'center',
-        marginBottom: 40,
+        marginBottom: 32,
     },
     logoContainer: {
         width: 64,
@@ -157,6 +241,24 @@ const styles = StyleSheet.create({
         color: '#6B7280',
         fontWeight: '400',
     },
+    errorBanner: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        backgroundColor: '#FEF2F2',
+        borderWidth: 1,
+        borderColor: '#FECACA',
+        borderRadius: 12,
+        paddingHorizontal: 16,
+        paddingVertical: 12,
+        marginBottom: 16,
+        gap: 10,
+    },
+    errorText: {
+        flex: 1,
+        fontSize: 13,
+        color: '#DC2626',
+        fontWeight: '500',
+    },
     formContainer: {
         flex: 1,
     },
@@ -165,7 +267,7 @@ const styles = StyleSheet.create({
     },
     label: {
         fontSize: 14,
-        fontWeight: '500',
+        fontWeight: '600',
         color: '#374151',
         marginBottom: 8,
     },
@@ -182,18 +284,34 @@ const styles = StyleSheet.create({
     },
     input: {
         backgroundColor: '#FFFFFF',
-        borderWidth: 1,
-        borderColor: '#F3F4F6',
+        borderWidth: 1.5,
+        borderColor: '#E5E7EB',
         borderRadius: 12,
         paddingHorizontal: 16,
-        paddingVertical: 16,
+        paddingVertical: 15,
         fontSize: 15,
         color: '#1F2937',
         shadowColor: '#000',
-        shadowOffset: { width: 0, height: 2 },
-        shadowOpacity: 0.02,
+        shadowOffset: { width: 0, height: 1 },
+        shadowOpacity: 0.04,
         shadowRadius: 4,
         elevation: 1,
+    },
+    inputError: {
+        borderColor: '#FCA5A5',
+    },
+    passwordInputWrapper: {
+        position: 'relative',
+    },
+    passwordInput: {
+        paddingRight: 48,
+    },
+    eyeIcon: {
+        position: 'absolute',
+        right: 16,
+        top: 0,
+        bottom: 0,
+        justifyContent: 'center',
     },
     primaryButton: {
         borderRadius: 12,
@@ -206,6 +324,9 @@ const styles = StyleSheet.create({
         shadowOpacity: 0.3,
         shadowRadius: 8,
         elevation: 4,
+    },
+    buttonDisabled: {
+        opacity: 0.7,
     },
     primaryButtonText: {
         color: '#FFFFFF',
@@ -230,7 +351,7 @@ const styles = StyleSheet.create({
     },
     secondaryButton: {
         backgroundColor: '#FFFFFF',
-        borderWidth: 1,
+        borderWidth: 1.5,
         borderColor: '#E5E7EB',
         borderRadius: 12,
         paddingVertical: 16,
