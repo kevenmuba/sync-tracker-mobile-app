@@ -1,7 +1,7 @@
 import { Ionicons } from '@expo/vector-icons';
 import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
 import React from 'react';
-import { Platform } from 'react-native';
+import { Platform, View } from 'react-native';
 
 import HomeScreen from '../screens/HomeScreen';
 import ProfileScreen from '../screens/ProfileScreen';
@@ -30,8 +30,13 @@ export default function MainTabNavigator() {
                         iconName = focused ? 'person' : 'person-outline';
                     }
 
-                    return <Ionicons name={iconName as any} size={size} color={color} />;
+                    return (
+                        <View style={{ alignItems: 'center', justifyContent: 'center' }} {...Platform.select({ web: { title: route.name } })}>
+                            <Ionicons name={iconName as any} size={size} color={color} />
+                        </View>
+                    );
                 },
+                tabBarShowLabel: false,
                 tabBarActiveTintColor: '#EA580C', // Orange color matching the mockup
                 tabBarInactiveTintColor: '#9CA3AF',
                 headerShown: false,
@@ -44,11 +49,6 @@ export default function MainTabNavigator() {
                     paddingTop: 8,
                     paddingBottom: Platform.OS === 'ios' ? 28 : 12,
                     backgroundColor: '#FFFFFF',
-                },
-                tabBarLabelStyle: {
-                    fontSize: 12,
-                    fontWeight: '600',
-                    marginTop: 4,
                 }
             })}
         >

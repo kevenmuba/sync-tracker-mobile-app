@@ -24,7 +24,7 @@ export default function LoginScreen({ navigation }: Props) {
 
     return (
         <LinearGradient
-            colors={['#F5F7FF', '#FADCFF', '#EBF4FF']}
+            colors={['#FFF7ED', '#FFEDD5', '#FFF7ED']}
             locations={[0.0, 0.5, 1.0]}
             start={{ x: 0, y: 0 }}
             end={{ x: 1, y: 1 }}
@@ -39,7 +39,7 @@ export default function LoginScreen({ navigation }: Props) {
                     {/* Header Section */}
                     <View style={styles.headerContainer}>
                         <LinearGradient
-                            colors={['#4F46E5', '#8B5CF6']}
+                            colors={['#EA580C', '#F97316']}
                             start={{ x: 0, y: 0 }}
                             end={{ x: 1, y: 1 }}
                             style={styles.logoContainer}
@@ -84,7 +84,7 @@ export default function LoginScreen({ navigation }: Props) {
 
                         <TouchableOpacity onPress={() => navigation.navigate('Home')} activeOpacity={0.8}>
                             <LinearGradient
-                                colors={['#2563EB', '#7C3AED']}
+                                colors={['#EA580C', '#F97316']}
                                 start={{ x: 0, y: 0 }}
                                 end={{ x: 1, y: 0 }}
                                 style={styles.primaryButton}
@@ -144,7 +144,7 @@ const styles = StyleSheet.create({
         justifyContent: 'center',
         alignItems: 'center',
         marginBottom: 24,
-        shadowColor: '#4F46E5',
+        shadowColor: '#EA580C',
         shadowOffset: { width: 0, height: 8 },
         shadowOpacity: 0.3,
         shadowRadius: 12,
@@ -183,7 +183,7 @@ const styles = StyleSheet.create({
     forgotPassword: {
         fontSize: 13,
         fontWeight: '600',
-        color: '#2563EB',
+        color: '#EA580C',
     },
     input: {
         backgroundColor: '#FFFFFF',
@@ -206,7 +206,7 @@ const styles = StyleSheet.create({
         alignItems: 'center',
         justifyContent: 'center',
         marginTop: 8,
-        shadowColor: '#2563EB',
+        shadowColor: '#EA580C',
         shadowOffset: { width: 0, height: 4 },
         shadowOpacity: 0.3,
         shadowRadius: 8,
@@ -243,7 +243,7 @@ const styles = StyleSheet.create({
         justifyContent: 'center',
     },
     secondaryButtonText: {
-        color: '#2563EB',
+        color: '#EA580C',
         fontSize: 16,
         fontWeight: '600',
     },

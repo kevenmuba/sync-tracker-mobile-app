@@ -31,7 +31,7 @@ export default function RegisterScreen({ navigation }: Props) {
 
     return (
         <LinearGradient
-            colors={['#F5F7FF', '#FADCFF', '#EBF4FF']}
+            colors={['#FFF7ED', '#FFEDD5', '#FFF7ED']}
             locations={[0.0, 0.5, 1.0]}
             start={{ x: 0, y: 0 }}
             end={{ x: 1, y: 1 }}
@@ -46,7 +46,7 @@ export default function RegisterScreen({ navigation }: Props) {
                     {/* Header Section */}
                     <View style={styles.headerContainer}>
                         <LinearGradient
-                            colors={['#4F46E5', '#8B5CF6']}
+                            colors={['#EA580C', '#F97316']}
                             start={{ x: 0, y: 0 }}
                             end={{ x: 1, y: 1 }}
                             style={styles.logoContainer}
@@ -138,7 +138,7 @@ export default function RegisterScreen({ navigation }: Props) {
                                             ]}>
                                                 {r}
                                             </Text>
-                                            {role === r && <Ionicons name="checkmark" size={18} color="#2563EB" />}
+                                            {role === r && <Ionicons name="checkmark" size={18} color="#EA580C" />}
                                         </TouchableOpacity>
                                     ))}
                                 </View>
@@ -147,7 +147,7 @@ export default function RegisterScreen({ navigation }: Props) {
 
                         <TouchableOpacity onPress={() => navigation.navigate('Home')} activeOpacity={0.8}>
                             <LinearGradient
-                                colors={['#2563EB', '#7C3AED']}
+                                colors={['#EA580C', '#F97316']}
                                 start={{ x: 0, y: 0 }}
                                 end={{ x: 1, y: 0 }}
                                 style={styles.primaryButton}
@@ -198,7 +198,7 @@ const styles = StyleSheet.create({
         justifyContent: 'center',
         alignItems: 'center',
         marginBottom: 16,
-        shadowColor: '#4F46E5',
+        shadowColor: '#EA580C',
         shadowOffset: { width: 0, height: 4 },
         shadowOpacity: 0.3,
         shadowRadius: 8,
@@ -293,7 +293,7 @@ const styles = StyleSheet.create({
         color: '#4B5563',
     },
     dropdownItemTextActive: {
-        color: '#2563EB',
+        color: '#EA580C',
         fontWeight: '600',
     },
     primaryButton: {
@@ -302,7 +302,7 @@ const styles = StyleSheet.create({
         alignItems: 'center',
         justifyContent: 'center',
         marginTop: 16,
-        shadowColor: '#2563EB',
+        shadowColor: '#EA580C',
         shadowOffset: { width: 0, height: 4 },
         shadowOpacity: 0.3,
         shadowRadius: 8,
@@ -322,7 +322,7 @@ const styles = StyleSheet.create({
         fontSize: 14,
     },
     linkTextBold: {
-        color: '#2563EB',
+        color: '#EA580C',
         fontWeight: '600',
     },
     footerContainer: {
