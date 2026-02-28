@@ -43,17 +43,23 @@ export default function MainTabNavigator() {
                 tabBarStyle: {
                     borderTopWidth: 1,
                     borderTopColor: '#F3F4F6',
-                    elevation: 0,
-                    shadowOpacity: 0,
-                    height: Platform.OS === 'ios' ? 96 : 76,
-                    paddingTop: 8,
-                    paddingBottom: Platform.OS === 'ios' ? 34 : 12, // Adjusted padding down to give label room but keep it off OS nav lines
+                    elevation: 10,
+                    shadowColor: '#000',
+                    shadowOpacity: 0.05,
+                    shadowOffset: { width: 0, height: -4 },
+                    shadowRadius: 10,
+                    height: Platform.OS === 'ios' ? 95 : 85,
+                    paddingTop: 10,
+                    paddingBottom: Platform.OS === 'ios' ? 35 : 25,
+                    marginBottom:20,
+
                     backgroundColor: '#FFFFFF',
                 },
                 tabBarLabelStyle: {
                     fontSize: 12,
                     fontWeight: '600',
                     marginTop: 4,
+                
                 }
             })}
         >
