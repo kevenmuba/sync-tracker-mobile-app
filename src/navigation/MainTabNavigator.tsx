@@ -45,9 +45,9 @@ export default function MainTabNavigator() {
                     borderTopColor: '#F3F4F6',
                     elevation: 0,
                     shadowOpacity: 0,
-                    height: Platform.OS === 'ios' ? 88 : 70,
+                    height: Platform.OS === 'ios' ? 96 : 76,
                     paddingTop: 8,
-                    paddingBottom: Platform.OS === 'ios' ? 28 : 12,
+                    paddingBottom: Platform.OS === 'ios' ? 34 : 20,
                     backgroundColor: '#FFFFFF',
                 }
             })}
