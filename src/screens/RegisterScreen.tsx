@@ -30,13 +30,7 @@ export default function RegisterScreen({ navigation }: Props) {
     const roles = ['Team Member', 'Project Admin', 'Super Admin'];
 
     return (
-        <LinearGradient
-            colors={['#FFF7ED', '#FFEDD5', '#FFF7ED']}
-            locations={[0.0, 0.5, 1.0]}
-            start={{ x: 0, y: 0 }}
-            end={{ x: 1, y: 1 }}
-            style={styles.gradientBackground}
-        >
+        <View style={styles.gradientBackground}>
             <KeyboardAvoidingView
                 style={styles.container}
                 behavior={Platform.OS === 'ios' ? 'padding' : undefined}
@@ -170,13 +164,14 @@ export default function RegisterScreen({ navigation }: Props) {
 
                 </ScrollView>
             </KeyboardAvoidingView>
-        </LinearGradient>
+        </View>
     );
 }
 
 const styles = StyleSheet.create({
     gradientBackground: {
         flex: 1,
+        backgroundColor: '#F4F6F9',
     },
     container: {
         flex: 1,

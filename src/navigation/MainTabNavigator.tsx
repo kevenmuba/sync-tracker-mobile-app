@@ -36,7 +36,7 @@ export default function MainTabNavigator() {
                         </View>
                     );
                 },
-                tabBarShowLabel: false,
+                tabBarShowLabel: true,
                 tabBarActiveTintColor: '#EA580C', // Orange color matching the mockup
                 tabBarInactiveTintColor: '#9CA3AF',
                 headerShown: false,
@@ -47,8 +47,13 @@ export default function MainTabNavigator() {
                     shadowOpacity: 0,
                     height: Platform.OS === 'ios' ? 96 : 76,
                     paddingTop: 8,
-                    paddingBottom: Platform.OS === 'ios' ? 34 : 20,
+                    paddingBottom: Platform.OS === 'ios' ? 34 : 12, // Adjusted padding down to give label room but keep it off OS nav lines
                     backgroundColor: '#FFFFFF',
+                },
+                tabBarLabelStyle: {
+                    fontSize: 12,
+                    fontWeight: '600',
+                    marginTop: 4,
                 }
             })}
         >
