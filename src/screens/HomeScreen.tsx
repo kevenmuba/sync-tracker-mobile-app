@@ -1,6 +1,7 @@
 import { Ionicons } from '@expo/vector-icons';
-import React from 'react';
+import React, { useEffect, useState } from 'react';
 import {
+    ActivityIndicator,
     Image,
     Platform,
     ScrollView,
@@ -10,9 +11,42 @@ import {
     View,
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { supabase } from '../lib/supabase';
 
 export default function HomeScreen() {
     const insets = useSafeAreaInsets();
+    const [userName, setUserName] = useState('');
+    const [loadingUser, setLoadingUser] = useState(true);
+
+    const getGreeting = () => {
+        const hour = new Date().getHours();
+        if (hour < 12) return 'Good Morning';
+        if (hour < 17) return 'Good Afternoon';
+        return 'Good Evening';
+    };
+
+    useEffect(() => {
+        const fetchUser = async () => {
+            try {
+                const { data: { user } } = await supabase.auth.getUser();
+                if (user) {
+                    // Try user_metadata.full_name first (set during signUp)
+                    const name: string =
+                        user.user_metadata?.full_name ||
+                        user.user_metadata?.name ||
+                        user.email?.split('@')[0] ||
+                        'there';
+                    // Show only first name for greeting
+                    setUserName(name.split(' ')[0]);
+                }
+            } catch (e) {
+                setUserName('there');
+            } finally {
+                setLoadingUser(false);
+            }
+        };
+        fetchUser();
+    }, []);
 
     const renderSummaryCard = (
         iconName: any,
@@ -97,7 +131,13 @@ export default function HomeScreen() {
                         />
                         <View>
                             <Text style={styles.greetingHeader}>Welcome back,</Text>
-                            <Text style={styles.greetingName}>Good Morning, Alex</Text>
+                            {loadingUser ? (
+                                <ActivityIndicator size="small" color="#EA580C" style={{ marginTop: 4 }} />
+                            ) : (
+                                <Text style={styles.greetingName}>
+                                    {getGreeting()}, {userName}
+                                </Text>
+                            )}
                         </View>
                     </View>
                     <TouchableOpacity style={styles.notificationButton}>
