@@ -1,23 +1,138 @@
-import { NativeStackNavigationProp } from '@react-navigation/native-stack';
+import { Ionicons } from '@expo/vector-icons';
 import React from 'react';
-import { StyleSheet, Text, TouchableOpacity, View } from 'react-native';
-import { RootStackParamList } from '../navigation/AppNavigator';
+import {
+    Image,
+    Platform,
+    ScrollView,
+    StyleSheet,
+    Text,
+    TouchableOpacity,
+    View,
+} from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
-type Props = {
-    navigation: NativeStackNavigationProp<RootStackParamList, 'Home'>;
-};
+export default function HomeScreen() {
+    const insets = useSafeAreaInsets();
 
-export default function HomeScreen({ navigation }: Props) {
+    const renderSummaryCard = (
+        iconName: any,
+        iconColor: string,
+        iconBgColor: string,
+        count: string,
+        label: string
+    ) => (
+        <View style={styles.summaryCard}>
+            <View style={[styles.iconContainer, { backgroundColor: iconBgColor }]}>
+                <Ionicons name={iconName} size={20} color={iconColor} />
+            </View>
+            <Text style={styles.summaryCount}>{count}</Text>
+            <Text style={styles.summaryLabel}>{label}</Text>
+        </View>
+    );
+
+    const renderTaskCard = (
+        title: string,
+        project: string,
+        progress: number,
+        statusLabel: string,
+        statusType: 'success' | 'warning' | 'error'
+    ) => {
+        let badgeColor = '';
+        let badgeBgColor = '';
+        let progressColor = '';
+
+        if (statusType === 'success') {
+            badgeColor = '#22C55E';
+            badgeBgColor = '#DCFCE7';
+            progressColor = '#EA580C'; // matches mockup primary orange
+        } else if (statusType === 'warning') {
+            badgeColor = '#EAB308';
+            badgeBgColor = '#FEF9C3';
+            progressColor = '#EAB308';
+        } else if (statusType === 'error') {
+            badgeColor = '#EF4444';
+            badgeBgColor = '#FEE2E2';
+            progressColor = '#EF4444';
+        }
+
+        return (
+            <View style={styles.taskCard}>
+                <View style={styles.taskHeader}>
+                    <View>
+                        <Text style={styles.taskTitle}>{title}</Text>
+                        <Text style={styles.taskProject}>Project: {project}</Text>
+                    </View>
+                    <View style={[styles.badge, { backgroundColor: badgeBgColor }]}>
+                        <Text style={[styles.badgeText, { color: badgeColor }]}>
+                            {statusLabel}
+                        </Text>
+                    </View>
+                </View>
+                <View style={styles.progressContainer}>
+                    <Text style={styles.progressLabel}>Progress</Text>
+                    <Text style={styles.progressValue}>{progress}%</Text>
+                </View>
+                <View style={styles.progressBarBg}>
+                    <View
+                        style={[
+                            styles.progressBarFill,
+                            { width: `${progress}%`, backgroundColor: progressColor },
+                        ]}
+                    />
+                </View>
+            </View>
+        );
+    };
+
     return (
-        <View style={styles.container}>
-            <Text style={styles.title}>Home</Text>
-            <Text style={styles.subtitle}>Welcome to Sync Tracker 🎉</Text>
-            <TouchableOpacity
-                style={styles.button}
-                onPress={() => navigation.navigate('Login')}
-            >
-                <Text style={styles.buttonText}>Logout</Text>
-            </TouchableOpacity>
+        <View style={[styles.container, { paddingTop: insets.top }]}>
+            <ScrollView contentContainerStyle={styles.scrollContent} showsVerticalScrollIndicator={false}>
+
+                {/* Header Profile Section */}
+                <View style={styles.header}>
+                    <View style={styles.profileInfo}>
+                        <Image
+                            source={{ uri: 'https://i.pravatar.cc/150?img=11' }}
+                            style={styles.avatar}
+                        />
+                        <View>
+                            <Text style={styles.greetingHeader}>Welcome back,</Text>
+                            <Text style={styles.greetingName}>Good Morning, Alex</Text>
+                        </View>
+                    </View>
+                    <TouchableOpacity style={styles.notificationButton}>
+                        <Ionicons name="notifications-outline" size={24} color="#1F2937" />
+                        <View style={styles.notificationDot} />
+                    </TouchableOpacity>
+                </View>
+
+                {/* Quick Summary Section */}
+                <View style={styles.section}>
+                    <Text style={styles.sectionTitle}>QUICK SUMMARY</Text>
+                    <View style={styles.grid}>
+                        {renderSummaryCard('clipboard-outline', '#EF4444', '#FEE2E2', '24', 'Total Tasks')}
+                        {renderSummaryCard('checkmark-circle-outline', '#22C55E', '#DCFCE7', '18', 'In Sync')}
+                        {renderSummaryCard('ban-outline', '#EF4444', '#FEE2E2', '2', 'Blocked')}
+                        {renderSummaryCard('help-circle-outline', '#EAB308', '#FEF9C3', '4', 'Help Needed')}
+                    </View>
+                </View>
+
+                {/* My Active Tasks Section */}
+                <View style={styles.section}>
+                    <View style={styles.sectionHeaderRow}>
+                        <Text style={styles.sectionTitleActive}>My Active Tasks</Text>
+                        <TouchableOpacity>
+                            <Text style={styles.viewAllText}>View all</Text>
+                        </TouchableOpacity>
+                    </View>
+
+                    {renderTaskCard('Implement Auth Flow', 'Mobile Redesign', 75, 'IN SYNC', 'success')}
+                    {renderTaskCard('API Documentation', 'Backend Integration', 30, 'HELP', 'warning')}
+                    {renderTaskCard('Database Migration', 'Core Infrastructure', 15, 'BLOCKED', 'error')}
+                    {renderTaskCard('UI Component Library', 'Design System', 92, 'IN SYNC', 'success')}
+                </View>
+
+            </ScrollView>
         </View>
     );
 }
@@ -25,31 +140,190 @@ export default function HomeScreen({ navigation }: Props) {
 const styles = StyleSheet.create({
     container: {
         flex: 1,
-        justifyContent: 'center',
+        backgroundColor: '#F4F6F9', // Light grayish-blue background
+    },
+    scrollContent: {
+        paddingHorizontal: 20,
+        paddingBottom: 40,
+        paddingTop: Platform.OS === 'android' ? 24 : 12,
+    },
+    header: {
+        flexDirection: 'row',
+        justifyContent: 'space-between',
         alignItems: 'center',
-        backgroundColor: '#f9fafb',
-        padding: 24,
-    },
-    title: {
-        fontSize: 28,
-        fontWeight: '700',
-        marginBottom: 8,
-        color: '#111827',
-    },
-    subtitle: {
-        fontSize: 16,
-        color: '#6b7280',
         marginBottom: 32,
     },
-    button: {
-        backgroundColor: '#ef4444',
-        paddingVertical: 14,
-        paddingHorizontal: 48,
-        borderRadius: 10,
+    profileInfo: {
+        flexDirection: 'row',
+        alignItems: 'center',
     },
-    buttonText: {
-        color: '#fff',
-        fontSize: 16,
+    avatar: {
+        width: 48,
+        height: 48,
+        borderRadius: 24,
+        marginRight: 12,
+        backgroundColor: '#E5E7EB',
+    },
+    greetingHeader: {
+        fontSize: 13,
+        color: '#6B7280',
+        fontWeight: '500',
+        marginBottom: 2,
+    },
+    greetingName: {
+        fontSize: 18,
+        color: '#111827',
+        fontWeight: '800',
+    },
+    notificationButton: {
+        width: 44,
+        height: 44,
+        borderRadius: 14,
+        backgroundColor: '#FFFFFF',
+        justifyContent: 'center',
+        alignItems: 'center',
+        shadowColor: '#000',
+        shadowOffset: { width: 0, height: 2 },
+        shadowOpacity: 0.04,
+        shadowRadius: 6,
+        elevation: 2,
+    },
+    notificationDot: {
+        position: 'absolute',
+        top: 10,
+        right: 12,
+        width: 8,
+        height: 8,
+        borderRadius: 4,
+        backgroundColor: '#EA580C',
+        borderWidth: 1.5,
+        borderColor: '#FFFFFF',
+    },
+    section: {
+        marginBottom: 32,
+    },
+    sectionTitle: {
+        fontSize: 13,
+        fontWeight: '700',
+        color: '#9CA3AF',
+        textTransform: 'uppercase',
+        letterSpacing: 0.5,
+        marginBottom: 16,
+    },
+    sectionTitleActive: {
+        fontSize: 18,
+        fontWeight: '800',
+        color: '#1F2937',
+    },
+    sectionHeaderRow: {
+        flexDirection: 'row',
+        justifyContent: 'space-between',
+        alignItems: 'center',
+        marginBottom: 16,
+    },
+    viewAllText: {
+        fontSize: 13,
         fontWeight: '600',
+        color: '#EA580C', // Orange theme
+    },
+    grid: {
+        flexDirection: 'row',
+        flexWrap: 'wrap',
+        justifyContent: 'space-between',
+    },
+    summaryCard: {
+        width: '48%',
+        backgroundColor: '#FFFFFF',
+        borderRadius: 16,
+        padding: 16,
+        marginBottom: 16,
+        shadowColor: '#000',
+        shadowOffset: { width: 0, height: 4 },
+        shadowOpacity: 0.03,
+        shadowRadius: 8,
+        elevation: 2,
+    },
+    iconContainer: {
+        width: 40,
+        height: 40,
+        borderRadius: 10,
+        justifyContent: 'center',
+        alignItems: 'center',
+        marginBottom: 16,
+    },
+    summaryCount: {
+        fontSize: 24,
+        fontWeight: '800',
+        color: '#111827',
+        marginBottom: 4,
+    },
+    summaryLabel: {
+        fontSize: 13,
+        fontWeight: '500',
+        color: '#6B7280',
+    },
+    taskCard: {
+        backgroundColor: '#FFFFFF',
+        borderRadius: 16,
+        padding: 20,
+        marginBottom: 16,
+        shadowColor: '#000',
+        shadowOffset: { width: 0, height: 4 },
+        shadowOpacity: 0.03,
+        shadowRadius: 8,
+        elevation: 2,
+    },
+    taskHeader: {
+        flexDirection: 'row',
+        justifyContent: 'space-between',
+        alignItems: 'flex-start',
+        marginBottom: 16,
+    },
+    taskTitle: {
+        fontSize: 16,
+        fontWeight: '700',
+        color: '#1F2937',
+        marginBottom: 4,
+    },
+    taskProject: {
+        fontSize: 12,
+        fontWeight: '500',
+        color: '#6B7280',
+    },
+    badge: {
+        paddingHorizontal: 8,
+        paddingVertical: 4,
+        borderRadius: 6,
+    },
+    badgeText: {
+        fontSize: 10,
+        fontWeight: '800',
+        textTransform: 'uppercase',
+    },
+    progressContainer: {
+        flexDirection: 'row',
+        justifyContent: 'space-between',
+        alignItems: 'center',
+        marginBottom: 8,
+    },
+    progressLabel: {
+        fontSize: 12,
+        fontWeight: '500',
+        color: '#9CA3AF',
+    },
+    progressValue: {
+        fontSize: 12,
+        fontWeight: '700',
+        color: '#6B7280',
+    },
+    progressBarBg: {
+        height: 6,
+        backgroundColor: '#F3F4F6',
+        borderRadius: 3,
+        overflow: 'hidden',
+    },
+    progressBarFill: {
+        height: '100%',
+        borderRadius: 3,
     },
 });
