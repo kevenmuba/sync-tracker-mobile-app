@@ -3,11 +3,14 @@ import { createNativeStackNavigator } from '@react-navigation/native-stack';
 import React from 'react';
 
 import CreateProjectScreen from '../screens/CreateProjectScreen';
+import CreateTaskScreen from '../screens/CreateTaskScreen';
 import LoginScreen from '../screens/LoginScreen';
 import NotificationsHistoryScreen from '../screens/NotificationsHistoryScreen';
+import PendingTasksScreen from '../screens/PendingTasksScreen';
 import ProjectAdminPendingScreen from '../screens/ProjectAdminPendingScreen';
 import ProjectsScreen from '../screens/ProjectsScreen';
 import RegisterScreen from '../screens/RegisterScreen';
+import TaskDetailsScreen from '../screens/TaskDetailsScreen';
 import MainTabNavigator from './MainTabNavigator';
 
 export type RootStackParamList = {
@@ -18,6 +21,9 @@ export type RootStackParamList = {
     Projects: undefined;
     ProjectAdminPending: undefined;
     NotificationsHistory: undefined;
+    CreateTask: undefined;
+    PendingTasks: undefined;
+    TaskDetails: { taskId: string; projectAdminId?: string };
 };
 
 const Stack = createNativeStackNavigator<RootStackParamList>();
@@ -56,6 +62,21 @@ export default function AppNavigator() {
                 <Stack.Screen
                     name="NotificationsHistory"
                     component={NotificationsHistoryScreen}
+                    options={{ headerShown: false }}
+                />
+                <Stack.Screen
+                    name="CreateTask"
+                    component={CreateTaskScreen}
+                    options={{ headerShown: false }}
+                />
+                <Stack.Screen
+                    name="PendingTasks"
+                    component={PendingTasksScreen}
+                    options={{ headerShown: false }}
+                />
+                <Stack.Screen
+                    name="TaskDetails"
+                    component={TaskDetailsScreen}
                     options={{ headerShown: false }}
                 />
             </Stack.Navigator>

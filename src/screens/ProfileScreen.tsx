@@ -84,6 +84,20 @@ export default function ProfileScreen() {
                             )}
                         </View>
                     )}
+
+                    {role === 'team_member' && (
+                        <TouchableOpacity
+                            style={styles.teamMemberButton}
+                            onPress={() => navigation.navigate('PendingTasks')}
+                            activeOpacity={0.8}
+                        >
+                            <View style={styles.teamMemberButtonIcon}>
+                                <Ionicons name="briefcase" size={24} color="#FFF" />
+                            </View>
+                            <Text style={styles.adminButtonText}>Assigned Tasks</Text>
+                            <Ionicons name="chevron-forward" size={20} color="#FFF" style={{ opacity: 0.8 }} />
+                        </TouchableOpacity>
+                    )}
                 </View>
             )}
         </View>
@@ -132,6 +146,22 @@ const styles = StyleSheet.create({
         color: '#FFFFFF',
         fontSize: 16,
         fontWeight: '600',
+    },
+    teamMemberButton: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        backgroundColor: '#EA580C',
+        padding: 16,
+        borderRadius: 16,
+        shadowColor: '#EA580C',
+        shadowOffset: { width: 0, height: 4 },
+        shadowOpacity: 0.2,
+        shadowRadius: 8,
+        elevation: 4,
+        marginTop: 12,
+    },
+    teamMemberButtonIcon: {
+        marginRight: 12,
     },
     projectsSection: {
         marginTop: 20,

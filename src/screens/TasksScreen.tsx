@@ -16,57 +16,7 @@ import {
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { RootStackParamList } from '../navigation/AppNavigator';
 
-const MOCK_TASKS = [
-    {
-        id: '1',
-        title: 'Finalize Project Proposal',
-        project: 'SyncTracker SaaS • Phase 2',
-        priority: 'HIGH PRIORITY',
-        priorityColor: '#EA580C',
-        priorityBg: '#FFEDD5',
-        date: 'Oct 25',
-        avatars: ['https://i.pravatar.cc/150?img=11'],
-        extraAvatars: '+2',
-        footerType: 'more'
-    },
-    {
-        id: '2',
-        title: 'UI Component Library Audit',
-        project: 'Design System • Internal',
-        priority: 'MEDIUM',
-        priorityColor: '#6366F1',
-        priorityBg: '#EEF2FF',
-        date: 'Oct 28',
-        avatars: ['https://i.pravatar.cc/150?img=12'],
-        progress: 65,
-        footerType: 'progress'
-    },
-    {
-        id: '3',
-        title: 'Weekly Team Sync',
-        project: 'Operations • Recurring',
-        priority: 'LOW PRIORITY',
-        priorityColor: '#9CA3AF',
-        priorityBg: '#F3F4F6',
-        date: 'Nov 02',
-        initials: [
-            { id: '1', text: 'JD', bg: '#DBEAFE', color: '#2563EB' },
-            { id: '2', text: 'MK', bg: '#FFEDD5', color: '#EA580C' }
-        ],
-        footerType: 'check'
-    },
-    {
-        id: '4',
-        title: 'API Integration Debugging',
-        project: 'Backend Services • Urgent',
-        priority: 'BLOCKED',
-        priorityColor: '#EF4444',
-        priorityBg: '#FEE2E2',
-        date: 'Today',
-        avatars: ['https://i.pravatar.cc/150?img=13'],
-        footerType: 'view'
-    }
-];
+import { supabase } from '../lib/supabase';
 
 const FILTERS = ['All', 'Pending', 'Completed', 'Blocked'];
 
@@ -76,69 +26,149 @@ export default function TasksScreen() {
     const [searchQuery, setSearchQuery] = useState('');
     const [activeFilter, setActiveFilter] = useState('All');
 
-    const renderTaskCard = ({ item }: { item: typeof MOCK_TASKS[0] }) => {
-        const isBordered = item.title === 'UI Component Library Audit'; // matching the mockup's purple border glow
+    const [tasks, setTasks] = useState<any[]>([]);
+    const [userRole, setUserRole] = useState<string | null>(null);
+
+    const fetchTasks = async () => {
+        try {
+            const { data: { user } } = await supabase.auth.getUser();
+            if (user) {
+                const { data: userData } = await supabase.from('users').select('role').eq('id', user.id).single();
+                if (userData) setUserRole(userData.role);
+            }
+
+            const { data, error } = await supabase
+                .from('tasks')
+                .select('*, project:projects(name), owner:users!responsible_owner(id, full_name)')
+                .order('created_at', { ascending: false });
+
+            if (data) {
+                setTasks(data);
+            }
+        } catch (error) {
+            console.error(error);
+        }
+    };
+
+    React.useEffect(() => {
+        const unsubscribe = navigation.addListener('focus', () => {
+            fetchTasks();
+        });
+
+        // Also run immediately
+        fetchTasks();
+
+        return unsubscribe;
+    }, [navigation]);
+
+    // UI Mapping logic
+    const getUIMapping = (task: any) => {
+        let ui = {
+            priority: 'UNKNOWN',
+            priorityColor: '#9CA3AF',
+            priorityBg: '#F3F4F6',
+            footerType: 'view',
+            progress: 0,
+        };
+
+        if (task.status === 'pending') {
+            ui.priority = 'PENDING';
+            ui.priorityColor = '#6366F1';
+            ui.priorityBg = '#EEF2FF';
+        } else if (task.status === 'in_sync') {
+            ui.priority = 'IN SYNC';
+            ui.priorityColor = '#16A34A';
+            ui.priorityBg = '#DCFCE7';
+            ui.footerType = 'progress';
+            ui.progress = 50;
+        } else if (task.status === 'blocked') {
+            ui.priority = 'BLOCKED';
+            ui.priorityColor = '#EF4444';
+            ui.priorityBg = '#FEE2E2';
+        } else if (task.status === 'completed') {
+            ui.priority = 'COMPLETED';
+            ui.priorityColor = '#9CA3AF';
+            ui.priorityBg = '#F3F4F6';
+            ui.footerType = 'check';
+        } else if (task.status === 'help_requested') {
+            ui.priority = 'HELP NEEDED';
+            ui.priorityColor = '#EA580C';
+            ui.priorityBg = '#FFEDD5';
+        }
+
+        return ui;
+    };
+
+    const getRandomAvatar = (userId: string) => {
+        if (!userId) return 'https://i.pravatar.cc/150?img=10';
+        const lastChar = userId.charCodeAt(userId.length - 1) || 0;
+        const index = (lastChar % 50) + 1;
+        return `https://i.pravatar.cc/150?img=${index}`;
+    };
+
+    const filteredTasks = tasks.filter(t => {
+        if (activeFilter !== 'All' && t.status.toLowerCase() !== activeFilter.toLowerCase()) {
+            return false;
+        }
+        if (searchQuery.trim()) {
+            const query = searchQuery.toLowerCase();
+            return t.title.toLowerCase().includes(query) || t.project?.name?.toLowerCase().includes(query);
+        }
+        return true;
+    });
+
+    const renderTaskCard = ({ item }: { item: any }) => {
+        const uiMap = getUIMapping(item);
+        const isBordered = item.status === 'in_sync';
+
+        const dateString = new Date(item.created_at).toLocaleDateString([], { month: 'short', day: 'numeric' });
 
         return (
             <TouchableOpacity
                 style={[styles.card, isBordered && styles.cardBordered]}
                 activeOpacity={0.8}
+                onPress={() => navigation.navigate('TaskDetails', { taskId: item.id })}
             >
                 <View style={styles.cardHeader}>
-                    <View style={[styles.priorityBadge, { backgroundColor: item.priorityBg }]}>
-                        <Text style={[styles.priorityText, { color: item.priorityColor }]}>
-                            {item.priority}
+                    <View style={[styles.priorityBadge, { backgroundColor: uiMap.priorityBg }]}>
+                        <Text style={[styles.priorityText, { color: uiMap.priorityColor }]}>
+                            {uiMap.priority}
                         </Text>
                     </View>
                     <View style={styles.dateContainer}>
                         <Ionicons name="calendar-outline" size={14} color="#9CA3AF" />
-                        <Text style={styles.dateText}>{item.date}</Text>
+                        <Text style={styles.dateText}>{dateString}</Text>
                     </View>
                 </View>
 
                 <Text style={styles.cardTitle}>{item.title}</Text>
-                <Text style={styles.cardProject}>{item.project}</Text>
+                <Text style={styles.cardProject}>{item.project?.name || 'Unknown Project'}</Text>
 
                 <View style={styles.cardFooter}>
                     <View style={styles.avatarGroup}>
-                        {item.avatars?.map((uri, index) => (
-                            <Image key={index} source={{ uri }} style={styles.avatarSmall} />
-                        ))}
-                        {item.initials?.map((init, index) => (
-                            <View
-                                key={index}
-                                style={[styles.initialBadge, { backgroundColor: init.bg, marginLeft: index > 0 ? -8 : 0 }]}
-                            >
-                                <Text style={[styles.initialText, { color: init.color }]}>{init.text}</Text>
-                            </View>
-                        ))}
-                        {item.extraAvatars && (
-                            <View style={styles.extraAvatarBadge}>
-                                <Text style={styles.extraAvatarText}>{item.extraAvatars}</Text>
-                            </View>
-                        )}
+                        <Image source={{ uri: getRandomAvatar(item.owner?.id) }} style={styles.avatarSmall} />
                     </View>
 
-                    {item.footerType === 'more' && (
+                    {uiMap.footerType === 'more' && (
                         <Ionicons name="ellipsis-horizontal" size={20} color="#9CA3AF" />
                     )}
 
-                    {item.footerType === 'progress' && (
+                    {uiMap.footerType === 'progress' && (
                         <View style={styles.progressFooter}>
-                            <Text style={styles.progressText}>{item.progress}% Done</Text>
+                            <Text style={styles.progressText}>{uiMap.progress}% Done</Text>
                             <View style={styles.progressBarBg}>
-                                <View style={[styles.progressBarFill, { width: `${item.progress}%` }]} />
+                                <View style={[styles.progressBarFill, { width: `${uiMap.progress}%` }]} />
                             </View>
                         </View>
                     )}
 
-                    {item.footerType === 'check' && (
+                    {uiMap.footerType === 'check' && (
                         <Ionicons name="checkmark-circle-outline" size={24} color="#D1D5DB" />
                     )}
 
-                    {item.footerType === 'view' && (
+                    {uiMap.footerType === 'view' && (
                         <View style={styles.viewBadge}>
-                            <Text style={styles.viewBadgeText}>View</Text>
+                            <Text style={styles.viewBadgeText}>View Details</Text>
                         </View>
                     )}
                 </View>
@@ -197,18 +227,31 @@ export default function TasksScreen() {
             </View>
 
             {/* List */}
-            <FlatList
-                data={MOCK_TASKS}
-                keyExtractor={(item) => item.id}
-                renderItem={renderTaskCard}
-                contentContainerStyle={styles.listContent}
-                showsVerticalScrollIndicator={false}
-            />
+            {tasks.length === 0 ? (
+                <View style={{ flex: 1, alignItems: 'center', justifyContent: 'center' }}>
+                    <Ionicons name="documents-outline" size={48} color="#D1D5DB" />
+                    <Text style={{ marginTop: 12, color: '#9CA3AF' }}>No tasks found.</Text>
+                </View>
+            ) : (
+                <FlatList
+                    data={filteredTasks}
+                    keyExtractor={(item) => item.id}
+                    renderItem={renderTaskCard}
+                    contentContainerStyle={styles.listContent}
+                    showsVerticalScrollIndicator={false}
+                />
+            )}
 
             {/* Floating Action Button */}
-            <TouchableOpacity style={styles.fab} activeOpacity={0.9}>
-                <Ionicons name="add" size={32} color="#FFFFFF" />
-            </TouchableOpacity>
+            {userRole === 'project_admin' && (
+                <TouchableOpacity
+                    style={styles.fab}
+                    activeOpacity={0.9}
+                    onPress={() => navigation.navigate('CreateTask')}
+                >
+                    <Ionicons name="add" size={32} color="#FFFFFF" />
+                </TouchableOpacity>
+            )}
         </View>
     );
 }
