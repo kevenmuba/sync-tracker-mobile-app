@@ -24,6 +24,7 @@ type Props = {
 export default function CreateProjectScreen({ navigation }: Props) {
     const [name, setName] = useState('');
     const [description, setDescription] = useState('');
+    const [endDate, setEndDate] = useState('');
     const [loading, setLoading] = useState(false);
 
     const handleCreateProject = async () => {
@@ -41,14 +42,21 @@ export default function CreateProjectScreen({ navigation }: Props) {
                 return;
             }
 
+            const projectData: any = {
+                name: name.trim(),
+                description: description.trim(),
+                created_by: user.id,
+                project_admin: null,
+            };
+
+            // Only add estimated_end_date if the user provided one, else let the DB default to +1 month.
+            if (endDate.trim()) {
+                projectData.estimated_end_date = endDate.trim();
+            }
+
             const { error } = await supabase
                 .from('projects')
-                .insert({
-                    name: name.trim(),
-                    description: description.trim(),
-                    created_by: user.id,
-                    project_admin: null,
-                });
+                .insert(projectData);
 
             if (error) throw error;
 
@@ -100,6 +108,17 @@ export default function CreateProjectScreen({ navigation }: Props) {
                             multiline
                             numberOfLines={4}
                             textAlignVertical="top"
+                        />
+                    </View>
+
+                    <View style={styles.inputGroup}>
+                        <Text style={styles.label}>Estimated End Date (Optional)</Text>
+                        <TextInput
+                            style={styles.input}
+                            placeholder="YYYY-MM-DD"
+                            placeholderTextColor="#9CA3AF"
+                            value={endDate}
+                            onChangeText={setEndDate}
                         />
                     </View>
 

@@ -13,10 +13,16 @@ import {
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { supabase } from '../lib/supabase';
 
+import { useNavigation } from '@react-navigation/native';
+import { NativeStackNavigationProp } from '@react-navigation/native-stack';
+import { RootStackParamList } from '../navigation/AppNavigator';
+
 export default function HomeScreen() {
     const insets = useSafeAreaInsets();
+    const navigation = useNavigation<NativeStackNavigationProp<RootStackParamList>>();
     const [userName, setUserName] = useState('');
     const [loadingUser, setLoadingUser] = useState(true);
+    const [projectCount, setProjectCount] = useState<number | null>(null);
 
     const getGreeting = () => {
         const hour = new Date().getHours();
@@ -50,7 +56,21 @@ export default function HomeScreen() {
                 setLoadingUser(false);
             }
         };
+        const fetchCounts = async () => {
+            try {
+                const { count, error } = await supabase
+                    .from('projects')
+                    .select('*', { count: 'exact', head: true });
+                if (!error && count !== null) {
+                    setProjectCount(count);
+                }
+            } catch (err) {
+                console.error(err);
+            }
+        };
+
         fetchUser();
+        fetchCounts();
     }, []);
 
     const renderSummaryCard = (
@@ -58,15 +78,21 @@ export default function HomeScreen() {
         iconColor: string,
         iconBgColor: string,
         count: string,
-        label: string
+        label: string,
+        onPress?: () => void
     ) => (
-        <View style={styles.summaryCard}>
+        <TouchableOpacity
+            style={styles.summaryCard}
+            activeOpacity={0.7}
+            onPress={onPress}
+            disabled={!onPress}
+        >
             <View style={[styles.iconContainer, { backgroundColor: iconBgColor }]}>
                 <Ionicons name={iconName} size={20} color={iconColor} />
             </View>
             <Text style={styles.summaryCount}>{count}</Text>
             <Text style={styles.summaryLabel}>{label}</Text>
-        </View>
+        </TouchableOpacity>
     );
 
     const renderTaskCard = (
@@ -151,14 +177,20 @@ export default function HomeScreen() {
                     </TouchableOpacity>
                 </View>
 
-                {/* Quick Summary Section */}
                 <View style={styles.section}>
                     <Text style={styles.sectionTitle}>QUICK SUMMARY</Text>
                     <View style={styles.grid}>
+                        {renderSummaryCard(
+                            'folder-open-outline',
+                            '#3B82F6',
+                            '#EFF6FF',
+                            projectCount !== null ? projectCount.toString() : '-',
+                            'Total Projects',
+                            () => navigation.navigate('Projects')
+                        )}
                         {renderSummaryCard('clipboard-outline', '#EF4444', '#FEE2E2', '24', 'Total Tasks')}
                         {renderSummaryCard('checkmark-circle-outline', '#22C55E', '#DCFCE7', '18', 'In Sync')}
                         {renderSummaryCard('ban-outline', '#EF4444', '#FEE2E2', '2', 'Blocked')}
-                        {renderSummaryCard('help-circle-outline', '#EAB308', '#FEF9C3', '4', 'Help Needed')}
                     </View>
                 </View>
 

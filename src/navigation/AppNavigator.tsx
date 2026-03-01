@@ -4,6 +4,7 @@ import React from 'react';
 
 import CreateProjectScreen from '../screens/CreateProjectScreen';
 import LoginScreen from '../screens/LoginScreen';
+import ProjectsScreen from '../screens/ProjectsScreen';
 import RegisterScreen from '../screens/RegisterScreen';
 import MainTabNavigator from './MainTabNavigator';
 
@@ -12,6 +13,7 @@ export type RootStackParamList = {
     Register: undefined;
     Dashboard: undefined; // Points to MainTabNavigator (renamed to avoid duplicate 'Home')
     CreateProject: undefined;
+    Projects: undefined;
 };
 
 const Stack = createNativeStackNavigator<RootStackParamList>();
@@ -35,6 +37,11 @@ export default function AppNavigator() {
                 <Stack.Screen
                     name="CreateProject"
                     component={CreateProjectScreen}
+                    options={{ headerShown: false }}
+                />
+                <Stack.Screen
+                    name="Projects"
+                    component={ProjectsScreen}
                     options={{ headerShown: false }}
                 />
             </Stack.Navigator>
