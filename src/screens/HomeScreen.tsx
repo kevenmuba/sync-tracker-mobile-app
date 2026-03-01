@@ -201,7 +201,10 @@ export default function HomeScreen() {
                     </View>
                     <TouchableOpacity
                         style={styles.notificationButton}
-                        onPress={() => navigation.navigate('NotificationsHistory')}
+                        onPress={() => {
+                            setUnreadCount(0);
+                            navigation.navigate('NotificationsHistory');
+                        }}
                     >
                         <Ionicons name="notifications-outline" size={24} color="#1F2937" />
                         {unreadCount > 0 && (
