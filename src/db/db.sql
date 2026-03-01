@@ -28,7 +28,17 @@ create table projects (
   project_admin uuid references public.users(id),
   status text default 'active',
   created_at timestamp default now(),
-  estimated_end_date timestamp default (now() + interval '1 month')
+  estimated_end_date timestamp default (now() + interval '1 month'),
+  admin_accepted boolean default false
+);
+
+create table notifications (
+  id uuid default gen_random_uuid() primary key,
+  user_id uuid references public.users(id) on delete cascade,
+  title text not null,
+  message text not null,
+  is_read boolean default false,
+  created_at timestamp default now()
 );
 
 create table tasks (

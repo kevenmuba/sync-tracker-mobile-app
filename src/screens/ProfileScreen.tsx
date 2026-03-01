@@ -10,6 +10,7 @@ export default function ProfileScreen() {
     const navigation = useNavigation<NativeStackNavigationProp<RootStackParamList>>();
     const [role, setRole] = useState<string | null>(null);
     const [loading, setLoading] = useState(true);
+    const [acceptedProjects, setAcceptedProjects] = useState<{ id: string, name: string }[]>([]);
 
     useEffect(() => {
         const fetchRole = async () => {
@@ -23,6 +24,16 @@ export default function ProfileScreen() {
                         .single();
                     if (data) {
                         setRole(data.role);
+
+                        if (data.role === 'project_admin') {
+                            const { data: projects } = await supabase
+                                .from('projects')
+                                .select('id, name')
+                                .eq('project_admin', user.id)
+                                .eq('admin_accepted', true);
+
+                            if (projects) setAcceptedProjects(projects);
+                        }
                     }
                 }
             } catch (e) {
@@ -56,6 +67,22 @@ export default function ProfileScreen() {
                             <Text style={styles.adminButtonText}>Create New Project</Text>
                             <Ionicons name="chevron-forward" size={20} color="#FFF" style={{ opacity: 0.8 }} />
                         </TouchableOpacity>
+                    )}
+
+                    {role === 'project_admin' && (
+                        <View style={styles.projectsSection}>
+                            <Text style={styles.projectsTitle}>Your Managed Projects</Text>
+                            {acceptedProjects.length > 0 ? (
+                                acceptedProjects.map((p) => (
+                                    <View key={p.id} style={styles.projectItem}>
+                                        <Ionicons name="folder-outline" size={20} color="#EA580C" />
+                                        <Text style={styles.projectName}>{p.name}</Text>
+                                    </View>
+                                ))
+                            ) : (
+                                <Text style={styles.emptyText}>You haven't accepted any projects yet.</Text>
+                            )}
+                        </View>
                     )}
                 </View>
             )}
@@ -106,4 +133,37 @@ const styles = StyleSheet.create({
         fontSize: 16,
         fontWeight: '600',
     },
+    projectsSection: {
+        marginTop: 20,
+    },
+    projectsTitle: {
+        fontSize: 16,
+        fontWeight: '700',
+        color: '#1F2937',
+        marginBottom: 12,
+    },
+    projectItem: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        backgroundColor: '#FFFFFF',
+        padding: 16,
+        borderRadius: 12,
+        marginBottom: 8,
+        shadowColor: '#000',
+        shadowOffset: { width: 0, height: 2 },
+        shadowOpacity: 0.05,
+        shadowRadius: 4,
+        elevation: 2,
+    },
+    projectName: {
+        marginLeft: 12,
+        fontSize: 15,
+        fontWeight: '600',
+        color: '#374151',
+    },
+    emptyText: {
+        fontSize: 14,
+        color: '#9CA3AF',
+        fontStyle: 'italic',
+    }
 });

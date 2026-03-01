@@ -1,7 +1,8 @@
 import { Ionicons } from '@expo/vector-icons';
+import { Picker } from '@react-native-picker/picker';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { LinearGradient } from 'expo-linear-gradient';
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import {
     ActivityIndicator,
     Alert,
@@ -25,7 +26,20 @@ export default function CreateProjectScreen({ navigation }: Props) {
     const [name, setName] = useState('');
     const [description, setDescription] = useState('');
     const [endDate, setEndDate] = useState('');
+    const [projectAdminId, setProjectAdminId] = useState('');
+    const [admins, setAdmins] = useState<{ id: string; full_name: string }[]>([]);
     const [loading, setLoading] = useState(false);
+
+    useEffect(() => {
+        const fetchAdmins = async () => {
+            const { data } = await supabase
+                .from('users')
+                .select('id, full_name')
+                .eq('role', 'project_admin');
+            if (data) setAdmins(data);
+        };
+        fetchAdmins();
+    }, []);
 
     const handleCreateProject = async () => {
         if (!name.trim()) {
@@ -46,7 +60,8 @@ export default function CreateProjectScreen({ navigation }: Props) {
                 name: name.trim(),
                 description: description.trim(),
                 created_by: user.id,
-                project_admin: null,
+                project_admin: projectAdminId ? projectAdminId : null,
+                admin_accepted: projectAdminId ? false : true,
             };
 
             // Only add estimated_end_date if the user provided one, else let the DB default to +1 month.
@@ -54,11 +69,22 @@ export default function CreateProjectScreen({ navigation }: Props) {
                 projectData.estimated_end_date = endDate.trim();
             }
 
-            const { error } = await supabase
+            const { data: insertedProject, error } = await supabase
                 .from('projects')
-                .insert(projectData);
+                .insert(projectData)
+                .select()
+                .single();
 
             if (error) throw error;
+
+            if (projectData.project_admin) {
+                // Insert a notification for the project admin
+                await supabase.from('notifications').insert({
+                    user_id: projectData.project_admin,
+                    title: 'New Project Assignment',
+                    message: `You have been assigned as Project Admin for "${projectData.name}". Please review and accept.`,
+                });
+            }
 
             Alert.alert('Success', 'Project created successfully!', [
                 { text: 'OK', onPress: () => navigation.navigate('Dashboard') }
@@ -120,6 +146,22 @@ export default function CreateProjectScreen({ navigation }: Props) {
                             value={endDate}
                             onChangeText={setEndDate}
                         />
+                    </View>
+
+                    <View style={styles.inputGroup}>
+                        <Text style={styles.label}>Assign Project Admin (Optional)</Text>
+                        <View style={styles.pickerContainer}>
+                            <Picker
+                                selectedValue={projectAdminId}
+                                onValueChange={(itemValue) => setProjectAdminId(itemValue)}
+                                style={styles.picker}
+                            >
+                                <Picker.Item label="Select an admin..." value="" color="#9CA3AF" />
+                                {admins.map((admin) => (
+                                    <Picker.Item key={admin.id} label={admin.full_name} value={admin.id} />
+                                ))}
+                            </Picker>
+                        </View>
                     </View>
 
                     <TouchableOpacity
@@ -198,6 +240,17 @@ const styles = StyleSheet.create({
         paddingVertical: 15,
         fontSize: 15,
         color: '#1F2937',
+    },
+    pickerContainer: {
+        backgroundColor: '#FFFFFF',
+        borderWidth: 1.5,
+        borderColor: '#E5E7EB',
+        borderRadius: 12,
+        overflow: 'hidden',
+    },
+    picker: {
+        height: 50,
+        width: '100%',
     },
     textArea: {
         height: 120,

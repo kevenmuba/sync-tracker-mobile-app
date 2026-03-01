@@ -22,6 +22,7 @@ type Project = {
     status: string;
     created_at: string;
     estimated_end_date: string;
+    project_admin: { full_name: string } | null;
 };
 
 export default function ProjectsScreen() {
@@ -35,11 +36,11 @@ export default function ProjectsScreen() {
             try {
                 const { data, error } = await supabase
                     .from('projects')
-                    .select('*')
+                    .select('*, project_admin:users!project_admin(full_name)')
                     .order('created_at', { ascending: false });
 
                 if (!error && data) {
-                    setProjects(data);
+                    setProjects(data as any);
                 }
             } catch (err) {
                 console.error('Error fetching projects:', err);
@@ -71,6 +72,12 @@ export default function ProjectsScreen() {
                 </Text>
 
                 <View style={styles.footerRow}>
+                    <View style={styles.dateInfo}>
+                        <Ionicons name="person-circle-outline" size={16} color="#4F46E5" style={styles.dateIcon} />
+                        <Text style={styles.dateText}>
+                            Admin: {item.project_admin?.full_name || 'Unassigned'}
+                        </Text>
+                    </View>
                     <View style={styles.dateInfo}>
                         <Ionicons name="calendar-outline" size={14} color="#6B7280" style={styles.dateIcon} />
                         <Text style={styles.dateText}>Created: {formatDate(item.created_at)}</Text>

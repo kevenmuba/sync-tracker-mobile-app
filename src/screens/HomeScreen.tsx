@@ -23,6 +23,7 @@ export default function HomeScreen() {
     const [userName, setUserName] = useState('');
     const [loadingUser, setLoadingUser] = useState(true);
     const [projectCount, setProjectCount] = useState<number | null>(null);
+    const [unreadCount, setUnreadCount] = useState(0);
 
     const getGreeting = () => {
         const hour = new Date().getHours();
@@ -69,8 +70,23 @@ export default function HomeScreen() {
             }
         };
 
+        const fetchNotifications = async () => {
+            const { data: { user } } = await supabase.auth.getUser();
+            if (user) {
+                const { count } = await supabase
+                    .from('notifications')
+                    .select('*', { count: 'exact', head: true })
+                    .eq('user_id', user.id)
+                    .eq('is_read', false);
+                if (count !== null) {
+                    setUnreadCount(count);
+                }
+            }
+        };
+
         fetchUser();
         fetchCounts();
+        fetchNotifications();
     }, []);
 
     const renderSummaryCard = (
@@ -171,9 +187,12 @@ export default function HomeScreen() {
                             )}
                         </View>
                     </View>
-                    <TouchableOpacity style={styles.notificationButton}>
+                    <TouchableOpacity
+                        style={styles.notificationButton}
+                        onPress={() => navigation.navigate('ProjectAdminPending')}
+                    >
                         <Ionicons name="notifications-outline" size={24} color="#1F2937" />
-                        <View style={styles.notificationDot} />
+                        {unreadCount > 0 && <View style={styles.notificationDot} />}
                     </TouchableOpacity>
                 </View>
 
