@@ -30,14 +30,19 @@ export default function HomeScreen() {
             try {
                 const { data: { user } } = await supabase.auth.getUser();
                 if (user) {
-                    // Try user_metadata.full_name first (set during signUp)
-                    const name: string =
-                        user.user_metadata?.full_name ||
-                        user.user_metadata?.name ||
-                        user.email?.split('@')[0] ||
-                        'there';
-                    // Show only first name for greeting
-                    setUserName(name.split(' ')[0]);
+                    // Fetch from public.users table instead of auth metadata
+                    const { data: publicUser } = await supabase
+                        .from('users')
+                        .select('full_name')
+                        .eq('id', user.id)
+                        .single();
+
+                    if (publicUser?.full_name) {
+                        setUserName(publicUser.full_name.split(' ')[0]);
+                    } else {
+                        // Fallback to email
+                        setUserName(user.email?.split('@')[0] || 'there');
+                    }
                 }
             } catch (e) {
                 setUserName('there');

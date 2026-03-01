@@ -67,6 +67,19 @@ export default function LoginScreen({ navigation }: Props) {
             }
 
             if (data.session) {
+                // Fetch public user data
+                const { data: publicUser, error: profileError } = await supabase
+                    .from('users')
+                    .select('*')
+                    .eq('id', data.session.user.id)
+                    .single();
+
+                if (profileError) {
+                    console.error('Error fetching public user profile:', profileError);
+                } else {
+                    console.log('Fetched public user profile on login:', publicUser);
+                }
+
                 navigation.navigate('Dashboard');
             }
         } catch (err) {

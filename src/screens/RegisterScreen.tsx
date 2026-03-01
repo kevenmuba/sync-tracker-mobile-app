@@ -63,13 +63,22 @@ export default function RegisterScreen({ navigation }: Props) {
             const { data, error: authError } = await supabase.auth.signUp({
                 email: email.trim().toLowerCase(),
                 password,
-                options: {
-                    data: {
-                        full_name: fullName.trim(),
-                        role,
-                    },
-                },
             });
+
+            if (!authError && data.user) {
+                const dbRole = role.toLowerCase().replace(' ', '_');
+                const { error: profileError } = await supabase
+                    .from('users')
+                    .update({
+                        full_name: fullName.trim(),
+                        role: dbRole
+                    })
+                    .eq('id', data.user.id);
+
+                if (profileError) {
+                    console.error('Failed to update public user profile:', profileError);
+                }
+            }
 
             if (authError) {
                 if (authError.message.toLowerCase().includes('already registered') ||
