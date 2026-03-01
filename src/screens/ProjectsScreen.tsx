@@ -22,6 +22,7 @@ type Project = {
     status: string;
     created_at: string;
     estimated_end_date: string;
+    admin_accepted: boolean;
     project_admin: { full_name: string } | null;
 };
 
@@ -50,6 +51,23 @@ export default function ProjectsScreen() {
         };
 
         fetchProjects();
+
+        // REAL-TIME: Listen for any updates (like admin accepting the project)
+        const channel = supabase
+            .channel('public:projects')
+            .on(
+                'postgres_changes',
+                { event: 'UPDATE', schema: 'public', table: 'projects' },
+                () => {
+                    // Refetch dynamically
+                    fetchProjects();
+                }
+            )
+            .subscribe();
+
+        return () => {
+            supabase.removeChannel(channel);
+        };
     }, []);
 
     const formatDate = (dateString: string) => {
@@ -76,6 +94,7 @@ export default function ProjectsScreen() {
                         <Ionicons name="person-circle-outline" size={16} color="#4F46E5" style={styles.dateIcon} />
                         <Text style={styles.dateText}>
                             Admin: {item.project_admin?.full_name || 'Unassigned'}
+                            {item.project_admin && (item.admin_accepted ? ' (Accepted)' : ' (Pending)')}
                         </Text>
                     </View>
                     <View style={styles.dateInfo}>

@@ -67,3 +67,7 @@ create table sync_logs (
   message text,
   created_at timestamp default now()
 );
+
+-- Enable real-time for notifications and projects
+alter publication supabase_realtime add table notifications;
+alter publication supabase_realtime add table projects;

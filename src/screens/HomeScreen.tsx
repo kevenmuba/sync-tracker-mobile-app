@@ -81,6 +81,18 @@ export default function HomeScreen() {
                 if (count !== null) {
                     setUnreadCount(count);
                 }
+
+                // REALTIME WATCHER FOR NEW UNREAD NOTIFICATIONS
+                const channel = supabase
+                    .channel('public:notifications:badge')
+                    .on(
+                        'postgres_changes',
+                        { event: 'INSERT', schema: 'public', table: 'notifications', filter: `user_id=eq.${user.id}` },
+                        () => {
+                            setUnreadCount((prev) => prev + 1);
+                        }
+                    )
+                    .subscribe();
             }
         };
 
@@ -189,10 +201,16 @@ export default function HomeScreen() {
                     </View>
                     <TouchableOpacity
                         style={styles.notificationButton}
-                        onPress={() => navigation.navigate('ProjectAdminPending')}
+                        onPress={() => navigation.navigate('NotificationsHistory')}
                     >
                         <Ionicons name="notifications-outline" size={24} color="#1F2937" />
-                        {unreadCount > 0 && <View style={styles.notificationDot} />}
+                        {unreadCount > 0 && (
+                            <View style={styles.notificationDot}>
+                                <Text style={{ color: '#FFF', fontSize: 10, fontWeight: '700' }}>
+                                    {unreadCount}
+                                </Text>
+                            </View>
+                        )}
                     </TouchableOpacity>
                 </View>
 
@@ -286,14 +304,17 @@ const styles = StyleSheet.create({
     },
     notificationDot: {
         position: 'absolute',
-        top: 10,
-        right: 12,
-        width: 8,
-        height: 8,
-        borderRadius: 4,
+        top: -6,
+        right: -6,
+        minWidth: 20,
+        height: 20,
+        borderRadius: 10,
         backgroundColor: '#EA580C',
         borderWidth: 1.5,
         borderColor: '#FFFFFF',
+        alignItems: 'center',
+        justifyContent: 'center',
+        paddingHorizontal: 4,
     },
     section: {
         marginBottom: 32,

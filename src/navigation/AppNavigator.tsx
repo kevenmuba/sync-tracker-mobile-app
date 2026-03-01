@@ -4,6 +4,7 @@ import React from 'react';
 
 import CreateProjectScreen from '../screens/CreateProjectScreen';
 import LoginScreen from '../screens/LoginScreen';
+import NotificationsHistoryScreen from '../screens/NotificationsHistoryScreen';
 import ProjectAdminPendingScreen from '../screens/ProjectAdminPendingScreen';
 import ProjectsScreen from '../screens/ProjectsScreen';
 import RegisterScreen from '../screens/RegisterScreen';
@@ -16,6 +17,7 @@ export type RootStackParamList = {
     CreateProject: undefined;
     Projects: undefined;
     ProjectAdminPending: undefined;
+    NotificationsHistory: undefined;
 };
 
 const Stack = createNativeStackNavigator<RootStackParamList>();
@@ -49,6 +51,11 @@ export default function AppNavigator() {
                 <Stack.Screen
                     name="ProjectAdminPending"
                     component={ProjectAdminPendingScreen}
+                    options={{ headerShown: false }}
+                />
+                <Stack.Screen
+                    name="NotificationsHistory"
+                    component={NotificationsHistoryScreen}
                     options={{ headerShown: false }}
                 />
             </Stack.Navigator>
