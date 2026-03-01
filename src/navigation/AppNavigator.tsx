@@ -2,6 +2,7 @@ import { NavigationContainer } from '@react-navigation/native';
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
 import React from 'react';
 
+import CreateProjectScreen from '../screens/CreateProjectScreen';
 import LoginScreen from '../screens/LoginScreen';
 import RegisterScreen from '../screens/RegisterScreen';
 import MainTabNavigator from './MainTabNavigator';
@@ -10,6 +11,7 @@ export type RootStackParamList = {
     Login: undefined;
     Register: undefined;
     Dashboard: undefined; // Points to MainTabNavigator (renamed to avoid duplicate 'Home')
+    CreateProject: undefined;
 };
 
 const Stack = createNativeStackNavigator<RootStackParamList>();
@@ -28,6 +30,11 @@ export default function AppNavigator() {
                 <Stack.Screen
                     name="Dashboard"
                     component={MainTabNavigator}
+                    options={{ headerShown: false }}
+                />
+                <Stack.Screen
+                    name="CreateProject"
+                    component={CreateProjectScreen}
                     options={{ headerShown: false }}
                 />
             </Stack.Navigator>

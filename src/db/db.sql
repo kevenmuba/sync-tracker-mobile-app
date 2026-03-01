@@ -27,7 +27,8 @@ create table projects (
   created_by uuid references public.users(id) on delete cascade,
   project_admin uuid references public.users(id),
   status text default 'active',
-  created_at timestamp default now()
+  created_at timestamp default now(),
+  estimated_end_date timestamp default (now() + interval '1 month')
 );
 
 create table tasks (
