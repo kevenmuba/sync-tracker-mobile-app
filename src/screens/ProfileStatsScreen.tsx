@@ -10,7 +10,7 @@ import {
     TouchableOpacity,
     View,
 } from 'react-native';
-import { BarChart, LineChart, PieChart } from 'react-native-chart-kit';
+import { BarChart, PieChart } from 'react-native-chart-kit';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { supabase } from '../lib/supabase';
 
@@ -36,6 +36,7 @@ export default function ProfileStatsScreen() {
 
     const fetchDetailedStats = async () => {
         try {
+            setLoading(true);
             const { data: { user } } = await supabase.auth.getUser();
             if (!user) return;
 
@@ -43,7 +44,7 @@ export default function ProfileStatsScreen() {
             const { data: tasks } = await supabase
                 .from('tasks')
                 .select('status')
-                .or(`responsible_owner.eq.${user.id}`);
+                .eq('responsible_owner', user.id);
 
             const statusCounts = {
                 completed: 0,
@@ -96,6 +97,15 @@ export default function ProfileStatsScreen() {
         }
     };
 
+    const formatTime = (hours: number) => {
+        if (hours <= 0) return '0h';
+        if (hours < 1) {
+            const minutes = Math.round(hours * 60);
+            return `${minutes}m`;
+        }
+        return `${hours.toFixed(1)}h`;
+    };
+
     if (loading) {
         return (
             <View style={[styles.container, styles.center]}>
@@ -135,21 +145,6 @@ export default function ProfileStatsScreen() {
             </View>
 
             <ScrollView contentContainerStyle={styles.scrollContent} showsVerticalScrollIndicator={false}>
-                {/* Weekly Activity Line Chart */}
-                <View style={styles.chartCard}>
-                    <Text style={styles.chartTitle}>WEEKLY PRODUCTIVITY (HOURS)</Text>
-                    <LineChart
-                        data={{
-                            labels: ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'],
-                            datasets: [{ data: stats.weeklyHours }],
-                        }}
-                        width={screenWidth - 40}
-                        height={200}
-                        chartConfig={chartConfig}
-                        bezier
-                        style={styles.chart}
-                    />
-                </View>
 
                 {/* Status Distribution Pie Chart */}
                 <View style={styles.chartCard}>
@@ -193,7 +188,7 @@ export default function ProfileStatsScreen() {
                 <View style={styles.metricGrid}>
                     <View style={styles.metricBox}>
                         <Ionicons name="time" size={20} color="#EA580C" />
-                        <Text style={styles.metricValue}>{stats.totalHours.toFixed(1)}h</Text>
+                        <Text style={styles.metricValue}>{formatTime(stats.totalHours)}</Text>
                         <Text style={styles.metricLabel}>Total Focused</Text>
                     </View>
                     <View style={styles.metricBox}>

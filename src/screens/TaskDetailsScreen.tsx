@@ -184,15 +184,38 @@ export default function TaskDetailsScreen({ route }: Props) {
     };
 
     const handleUpdateProgress = async (newProgress: number) => {
-        if (!isProjectAdmin) return;
+        if (!isProjectAdmin && currentUserId !== task?.owner?.id) return;
         try {
+            let updates: any = { progress: newProgress };
+
+            // Sync status with progress
+            if (newProgress === 100) {
+                updates.status = 'completed';
+            } else if (newProgress === 0) {
+                updates.status = 'pending';
+            } else {
+                // If progress is > 0 and < 100, set to in_sync
+                updates.status = 'in_sync';
+            }
+
             const { error } = await supabase
                 .from('tasks')
-                .update({ progress: newProgress })
+                .update(updates)
                 .eq('id', taskId);
 
             if (error) throw error;
-            Alert.alert('Success', `Progress updated to ${newProgress}%`);
+
+            // Log the change if status changed
+            if (updates.status && updates.status !== task?.status) {
+                await supabase.from('sync_logs').insert({
+                    task_id: taskId,
+                    user_id: currentUserId,
+                    status: updates.status,
+                    message: `${isProjectAdmin ? 'Admin' : 'Owner'} updated progress to ${newProgress}% and status to ${updates.status}`,
+                });
+            }
+
+            Alert.alert('Success', `Progress updated to ${newProgress}%${updates.status ? ' and status to ' + updates.status : ''}`);
             fetchData();
         } catch (error: any) {
             Alert.alert('Error', error.message || 'Could not update progress');
@@ -201,7 +224,8 @@ export default function TaskDetailsScreen({ route }: Props) {
 
     const handleUpdateStatus = async (newStatus: string) => {
         if (!currentUserId || !task) return;
-        if (currentUserId !== task.owner?.id) return;
+        // Allow if user is owner OR project admin
+        if (currentUserId !== task.owner?.id && !isProjectAdmin) return;
 
         try {
             setLoading(true);
@@ -218,7 +242,8 @@ export default function TaskDetailsScreen({ route }: Props) {
                 'in_sync': 'Task set to In Sync',
                 'blocked': 'Task marked as Blocked',
                 'help_requested': 'Help requested for this task',
-                'pending': 'Task moved back to Pending status'
+                'pending': 'Task moved back to Pending status',
+                'completed': 'Task marked as Completed'
             };
 
             const { error: logError } = await supabase
@@ -393,10 +418,10 @@ export default function TaskDetailsScreen({ route }: Props) {
                     </View>
                 )}
 
-                {/* Responsible Owner Action: Accept/Update Task */}
-                {currentUserId === task.owner?.id && task.status !== 'completed' && (
+                {/* Responsible Owner or Admin Action: Update Status */}
+                {(currentUserId === task.owner?.id || isProjectAdmin) && (
                     <View style={styles.actionContainer}>
-                        <Text style={styles.sectionHeadingStandardSmall}>Log Sync Update</Text>
+                        <Text style={styles.sectionHeadingStandardSmall}>Update Task Status</Text>
 
                         {task.status === 'pending' ? (
                             <TouchableOpacity
@@ -443,6 +468,14 @@ export default function TaskDetailsScreen({ route }: Props) {
                                         <Text style={[styles.statusToggleText, task.status === 'help_requested' && styles.statusToggleTextActive]}>Help</Text>
                                     </TouchableOpacity>
                                 </View>
+
+                                <TouchableOpacity
+                                    style={[styles.statusToggleBtn, { marginTop: 12, width: '100%' }, task.status === 'completed' && styles.statusToggleBtnActiveCompleted]}
+                                    onPress={() => handleUpdateStatus('completed')}
+                                >
+                                    <Ionicons name="checkmark-circle-outline" size={20} color={task.status === 'completed' ? '#FFF' : '#10B981'} />
+                                    <Text style={[styles.statusToggleText, task.status === 'completed' && styles.statusToggleTextActive]}>Mark as Completed</Text>
+                                </TouchableOpacity>
                             </View>
                         )}
                         <Text style={styles.actionNote}>
@@ -453,8 +486,8 @@ export default function TaskDetailsScreen({ route }: Props) {
                     </View>
                 )}
 
-                {/* Project Admin Action: Update Progress */}
-                {isProjectAdmin && task.status === 'in_sync' && (
+                {/* Progress Update (Admin or Owner) */}
+                {(isProjectAdmin || currentUserId === task.owner?.id) && (task.status === 'in_sync' || task.status === 'blocked' || task.status === 'help_requested') && (
                     <View style={styles.adminActionCard}>
                         <Text style={styles.sectionHeadingStandard}>Update Progress</Text>
                         <View style={styles.progressUpdateRow}>
@@ -798,6 +831,10 @@ const styles = StyleSheet.create({
     statusToggleBtnActivePending: {
         backgroundColor: '#6366F1',
         borderColor: '#6366F1',
+    },
+    statusToggleBtnActiveCompleted: {
+        backgroundColor: '#10B981',
+        borderColor: '#10B981',
     },
     statusToggleText: {
         fontSize: 12,

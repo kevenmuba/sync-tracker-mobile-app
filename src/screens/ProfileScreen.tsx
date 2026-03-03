@@ -62,18 +62,15 @@ export default function ProfileScreen() {
 
             // 2. Fetch Stats
             // Completed Tasks (where user is owner or participant)
-            const { count: compCount } = await supabase
+            const { data: userTasks } = await supabase
                 .from('tasks')
-                .select('*', { count: 'exact', head: true })
-                .eq('status', 'completed')
-                .or(`responsible_owner.eq.${user.id},id.in.(select task_id from participants where user_id = eq.${user.id})`);
+                .select('status, progress')
+                .eq('responsible_owner', user.id);
 
-            // In Progress Tasks
-            const { count: progCount } = await supabase
-                .from('tasks')
-                .select('*', { count: 'exact', head: true })
-                .neq('status', 'completed')
-                .or(`responsible_owner.eq.${user.id},id.in.(select task_id from participants where user_id = eq.${user.id})`);
+            const compCountNum = userTasks?.filter(t => t.status === 'completed').length || 0;
+            const progCountNum = userTasks?.filter(t =>
+                t.status !== 'completed' && (t.status === 'in_sync' || (t.progress || 0) > 0)
+            ).length || 0;
 
             // Total Hours
             const { data: hoursData } = await supabase
@@ -84,8 +81,8 @@ export default function ProfileScreen() {
             const totalHours = hoursData?.reduce((acc, curr) => acc + Number(curr.hours || 0), 0) || 0;
 
             setStats({
-                completed: compCount || 0,
-                inProgress: progCount || 0,
+                completed: compCountNum,
+                inProgress: progCountNum,
                 totalHours: totalHours
             });
 
@@ -165,6 +162,15 @@ export default function ProfileScreen() {
 
     const defaultAvatar = `https://ui-avatars.com/api/?name=${encodeURIComponent(userData.fullName || 'User')}&background=EA580C&color=fff&size=200`;
 
+    const formatTime = (hours: number) => {
+        if (hours <= 0) return '0h';
+        if (hours < 1) {
+            const minutes = Math.round(hours * 60);
+            return `${minutes}m`;
+        }
+        return `${hours.toFixed(1)}h`;
+    };
+
     return (
         <View style={[styles.container, { paddingTop: insets.top }]}>
             {/* Header */}
@@ -213,7 +219,7 @@ export default function ProfileScreen() {
                 <View style={styles.statsContainer}>
                     {renderStatCard('checkmark-circle-outline', 'Tasks Completed', stats.completed.toString(), '#3B82F6', '#EFF6FF')}
                     {renderStatCard('clipboard-outline', 'Tasks In Progress', stats.inProgress.toString(), '#EA580C', '#FFF7ED')}
-                    {renderStatCard('time-outline', 'Total Hours Logged', `${stats.totalHours.toFixed(1)}h`, '#8B5CF6', '#F5F3FF')}
+                    {renderStatCard('time-outline', 'Total Hours Logged', formatTime(stats.totalHours), '#8B5CF6', '#F5F3FF')}
                 </View>
 
                 {/* Main Actions */}

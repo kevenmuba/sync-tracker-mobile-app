@@ -92,15 +92,15 @@ export default function SettingsScreen() {
                         {renderMenuItem(
                             'notifications-outline',
                             'Push Notifications',
-                            'Manage your alerts and sounds',
-                            () => { },
+                            'Coming Soon',
+                            () => Alert.alert('Coming Soon', 'Push notifications will be available in the next update.'),
                             '#8B5CF6'
                         )}
 
                         <Text style={[styles.sectionLabel, { marginTop: 32 }]}>APP INFO</Text>
                         <View style={styles.infoRow}>
                             <Text style={styles.infoLabel}>Version</Text>
-                            <Text style={styles.infoValue}>v2.0.0 Stable</Text>
+                            <Text style={styles.infoValue}>v1.0.0 Stable</Text>
                         </View>
                         <View style={styles.infoRow}>
                             <Text style={styles.infoLabel}>Last Updated</Text>
