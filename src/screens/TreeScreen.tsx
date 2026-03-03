@@ -128,10 +128,8 @@ export default function TreeScreen() {
         setExpandedTasks(newExpanded);
     };
 
-    const getRandomAvatar = (userId: string) => {
-        const lastChar = userId.charCodeAt(userId.length - 1) || 0;
-        const index = (lastChar % 50) + 1;
-        return `https://i.pravatar.cc/150?img=${index}`;
+    const getFallbackAvatar = (fullName: string) => {
+        return `https://ui-avatars.com/api/?name=${encodeURIComponent(fullName || 'User')}&background=EA580C&color=fff&size=200`;
     };
 
     const renderProjectPicker = () => (
@@ -210,7 +208,7 @@ export default function TreeScreen() {
                         <Text style={styles.sectionTitle}>RESPONSIBLE OWNER</Text>
                         <View style={styles.memberRow}>
                             <Image
-                                source={{ uri: item.responsible_owner?.avatar_url || getRandomAvatar(item.responsible_owner?.id || 'default') }}
+                                source={{ uri: item.responsible_owner?.avatar_url || getFallbackAvatar(item.responsible_owner?.full_name || 'Owner') }}
                                 style={styles.avatar}
                             />
                             <View style={styles.memberInfo}>
@@ -229,7 +227,7 @@ export default function TreeScreen() {
                                 {grouped[role].map((p: Participant) => (
                                     <View key={p.id} style={styles.memberRow}>
                                         <Image
-                                            source={{ uri: p.user?.avatar_url || getRandomAvatar(p.user?.id || 'default') }}
+                                            source={{ uri: p.user?.avatar_url || getFallbackAvatar(p.user?.full_name || 'User') }}
                                             style={styles.avatar}
                                         />
                                         <View style={styles.memberInfo}>

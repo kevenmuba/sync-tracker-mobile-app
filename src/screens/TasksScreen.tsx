@@ -28,18 +28,26 @@ export default function TasksScreen() {
 
     const [tasks, setTasks] = useState<any[]>([]);
     const [userRole, setUserRole] = useState<string | null>(null);
+    const [userAvatar, setUserAvatar] = useState<string | null>(null);
+    const [userFullName, setUserFullName] = useState<string>('');
+
+    const defaultAvatar = `https://ui-avatars.com/api/?name=${encodeURIComponent(userFullName || 'User')}&background=EA580C&color=fff&size=200`;
 
     const fetchTasks = async () => {
         try {
             const { data: { user } } = await supabase.auth.getUser();
             if (user) {
-                const { data: userData } = await supabase.from('users').select('role').eq('id', user.id).single();
-                if (userData) setUserRole(userData.role);
+                const { data: userData } = await supabase.from('users').select('role, avatar_url, full_name').eq('id', user.id).single();
+                if (userData) {
+                    setUserRole(userData.role);
+                    setUserAvatar(userData.avatar_url);
+                    setUserFullName(userData.full_name || '');
+                }
             }
 
             const { data, error } = await supabase
                 .from('tasks')
-                .select('*, project:projects(name), owner:users!responsible_owner(id, full_name)')
+                .select('*, project:projects(name), owner:users!responsible_owner(id, full_name, avatar_url)')
                 .order('created_at', { ascending: false });
 
             if (data) {
@@ -99,11 +107,9 @@ export default function TasksScreen() {
         return ui;
     };
 
-    const getRandomAvatar = (userId: string) => {
-        if (!userId) return 'https://i.pravatar.cc/150?img=10';
-        const lastChar = userId.charCodeAt(userId.length - 1) || 0;
-        const index = (lastChar % 50) + 1;
-        return `https://i.pravatar.cc/150?img=${index}`;
+    const getAvatar = (taskOwner: any) => {
+        if (taskOwner?.avatar_url) return taskOwner.avatar_url;
+        return `https://ui-avatars.com/api/?name=${encodeURIComponent(taskOwner?.full_name || 'User')}&background=EA580C&color=fff&size=200`;
     };
 
     const filteredTasks = tasks.filter(t => {
@@ -153,7 +159,7 @@ export default function TasksScreen() {
 
                 <View style={styles.cardFooter}>
                     <View style={styles.avatarGroup}>
-                        <Image source={{ uri: getRandomAvatar(item.owner?.id) }} style={styles.avatarSmall} />
+                        <Image source={{ uri: getAvatar(item.owner) }} style={styles.avatarSmall} />
                     </View>
 
                     {uiMap.footerType === 'more' && (
@@ -193,7 +199,7 @@ export default function TasksScreen() {
                         <Ionicons name="notifications-outline" size={24} color="#4B5563" />
                         <View style={styles.badgeDot} />
                     </TouchableOpacity>
-                    <Image source={{ uri: 'https://i.pravatar.cc/150?img=33' }} style={styles.profilePic} />
+                    <Image source={{ uri: userAvatar || defaultAvatar }} style={styles.profilePic} />
                 </View>
             </View>
 

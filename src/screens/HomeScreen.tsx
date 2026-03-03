@@ -30,6 +30,9 @@ export default function HomeScreen() {
     const [blockedCount, setBlockedCount] = useState(0);
     const [activeTasks, setActiveTasks] = useState<any[]>([]);
     const [loadingTasks, setLoadingTasks] = useState(true);
+    const [userAvatar, setUserAvatar] = useState<string | null>(null);
+
+    const defaultAvatar = `https://ui-avatars.com/api/?name=${encodeURIComponent(userName || 'User')}&background=EA580C&color=fff&size=200`;
 
     const getGreeting = () => {
         const hour = new Date().getHours();
@@ -46,7 +49,7 @@ export default function HomeScreen() {
                     // Fetch from public.users table instead of auth metadata
                     const { data: publicUser } = await supabase
                         .from('users')
-                        .select('full_name')
+                        .select('full_name, avatar_url')
                         .eq('id', user.id)
                         .single();
 
@@ -55,6 +58,10 @@ export default function HomeScreen() {
                     } else {
                         // Fallback to email
                         setUserName(user.email?.split('@')[0] || 'there');
+                    }
+
+                    if (publicUser?.avatar_url) {
+                        setUserAvatar(publicUser.avatar_url);
                     }
                 }
             } catch (e) {
@@ -240,7 +247,7 @@ export default function HomeScreen() {
                 <View style={styles.header}>
                     <View style={styles.profileInfo}>
                         <Image
-                            source={{ uri: 'https://i.pravatar.cc/150?img=11' }}
+                            source={{ uri: userAvatar || defaultAvatar }}
                             style={styles.avatar}
                         />
                         <View>

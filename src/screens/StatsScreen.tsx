@@ -118,10 +118,8 @@ export default function StatsScreen() {
         }
     };
 
-    const getRandomAvatar = (userId: string) => {
-        const lastChar = userId.charCodeAt(userId.length - 1) || 0;
-        const index = (lastChar % 50) + 1;
-        return `https://i.pravatar.cc/150?img=${index}`;
+    const getFallbackAvatar = (fullName: string) => {
+        return `https://ui-avatars.com/api/?name=${encodeURIComponent(fullName || 'User')}&background=EA580C&color=fff&size=200`;
     };
 
     const getStatusColor = (status: string) => {
@@ -172,7 +170,7 @@ export default function StatsScreen() {
                     <G transform={`translate(${centerX - nodeRadius}, ${ownerY - nodeRadius})`}>
                         <Circle cx={nodeRadius} cy={nodeRadius} r={nodeRadius} fill="#111827" />
                         <SvgImage
-                            href={item.responsible_owner?.avatar_url || getRandomAvatar(item.responsible_owner?.id || 'owner')}
+                            href={item.responsible_owner?.avatar_url || getFallbackAvatar(item.responsible_owner?.full_name || 'Owner')}
                             x="5" y="5" width="40" height="40"
                             clipPath="circle(20)"
                         />
@@ -224,16 +222,22 @@ export default function StatsScreen() {
                                 <G transform={`translate(${pX - 20}, ${pY - 20})`}>
                                     <Circle cx="20" cy="20" r="20" fill="#F1F5F9" stroke="#E2E8F0" strokeWidth="1" />
                                     <SvgImage
-                                        href={p.user?.avatar_url || getRandomAvatar(p.user?.id || 'part')}
+                                        href={p.user?.avatar_url || getFallbackAvatar(p.user?.full_name || 'User')}
                                         x="5" y="5" width="30" height="30"
                                         clipPath="circle(15)"
                                     />
                                 </G>
                                 <SvgText
                                     x={pX} y={pY + 35}
-                                    fill="#475569" fontSize="10" fontWeight="bold" textAnchor="middle"
+                                    fill="#1F2937" fontSize="10" fontWeight="bold" textAnchor="middle"
                                 >
                                     {p.user?.full_name?.split(' ')[0]}
+                                </SvgText>
+                                <SvgText
+                                    x={pX} y={pY + 47}
+                                    fill="#94A3B8" fontSize="8" fontWeight="600" textAnchor="middle"
+                                >
+                                    {p.role.toUpperCase()}
                                 </SvgText>
                             </G>
                         );
@@ -323,7 +327,7 @@ const styles = StyleSheet.create({
         borderWidth: 1,
         borderColor: '#E2E8F0',
     },
-    badgeActive: { backgroundColor: '#111827', borderColor: '#111827' },
+    badgeActive: { backgroundColor: '#EA580C', borderColor: '#EA580C' },
     badgeText: { fontSize: 13, fontWeight: '600', color: '#64748B' },
     badgeTextActive: { color: '#FFF' },
     scrollList: { padding: 20 },
