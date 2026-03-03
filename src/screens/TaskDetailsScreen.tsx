@@ -199,6 +199,48 @@ export default function TaskDetailsScreen({ route }: Props) {
         }
     };
 
+    const handleUpdateStatus = async (newStatus: string) => {
+        if (!currentUserId || !task) return;
+        if (currentUserId !== task.owner?.id) return;
+
+        try {
+            setLoading(true);
+            // Update status
+            const { error: updateError } = await supabase
+                .from('tasks')
+                .update({ status: newStatus })
+                .eq('id', taskId);
+
+            if (updateError) throw updateError;
+
+            // Create Sync Log
+            const logMessages: Record<string, string> = {
+                'in_sync': 'Task set to In Sync',
+                'blocked': 'Task marked as Blocked',
+                'help_requested': 'Help requested for this task',
+                'pending': 'Task moved back to Pending status'
+            };
+
+            const { error: logError } = await supabase
+                .from('sync_logs')
+                .insert({
+                    task_id: taskId,
+                    user_id: currentUserId,
+                    status: newStatus,
+                    message: logMessages[newStatus] || `Status updated to ${newStatus}`,
+                });
+
+            if (logError) throw logError;
+
+            Alert.alert('Success', `Task status updated to ${newStatus.replace('_', ' ').toUpperCase()}`);
+            fetchData();
+        } catch (error: any) {
+            Alert.alert('Error', error.message || 'Could not update status');
+        } finally {
+            setLoading(false);
+        }
+    };
+
     if (loading) {
         return (
             <View style={[styles.container, styles.center]}>
@@ -249,8 +291,24 @@ export default function TaskDetailsScreen({ route }: Props) {
                 <View style={styles.taskInfoCard}>
                     <View style={styles.taskHeaderRow}>
                         <Text style={styles.taskTitle}>{task.title}</Text>
-                        <View style={styles.statusBadge}>
-                            <Text style={styles.statusText}>{task.status.toUpperCase()}</Text>
+                        <View style={[
+                            styles.statusBadge,
+                            task.status === 'in_sync' && styles.statusBadgeSync,
+                            task.status === 'blocked' && styles.statusBadgeBlocked,
+                            task.status === 'help_requested' && styles.statusBadgeHelp,
+                            task.status === 'pending' && styles.statusBadgePending,
+                            task.status === 'completed' && styles.statusBadgeCompleted,
+                        ]}>
+                            <Text style={[
+                                styles.statusText,
+                                task.status === 'in_sync' && styles.statusTextSync,
+                                task.status === 'blocked' && styles.statusTextBlocked,
+                                task.status === 'help_requested' && styles.statusTextHelp,
+                                task.status === 'pending' && styles.statusTextPending,
+                                task.status === 'completed' && styles.statusTextCompleted,
+                            ]}>
+                                {task.status.replace('_', ' ').toUpperCase()}
+                            </Text>
                         </View>
                     </View>
 
@@ -335,18 +393,62 @@ export default function TaskDetailsScreen({ route }: Props) {
                     </View>
                 )}
 
-                {/* Responsible Owner Action: Accept Task */}
-                {task.status === 'pending' && currentUserId === task.owner?.id && (
+                {/* Responsible Owner Action: Accept/Update Task */}
+                {currentUserId === task.owner?.id && task.status !== 'completed' && (
                     <View style={styles.actionContainer}>
-                        <TouchableOpacity
-                            style={styles.acceptButton}
-                            onPress={handleAcceptTask}
-                        >
-                            <Ionicons name="checkmark-done-circle-outline" size={24} color="#FFF" />
-                            <Text style={styles.acceptButtonText}>Accept Task</Text>
-                        </TouchableOpacity>
+                        <Text style={styles.sectionHeadingStandardSmall}>Log Sync Update</Text>
+
+                        {task.status === 'pending' ? (
+                            <TouchableOpacity
+                                style={styles.acceptButton}
+                                onPress={handleAcceptTask}
+                            >
+                                <Ionicons name="checkmark-done-circle-outline" size={24} color="#FFF" />
+                                <Text style={styles.acceptButtonText}>Accept Task</Text>
+                            </TouchableOpacity>
+                        ) : (
+                            <View style={{ width: '100%' }}>
+                                <View style={styles.statusButtonRow}>
+                                    <TouchableOpacity
+                                        style={[styles.statusToggleBtn, task.status === 'pending' && styles.statusToggleBtnActivePending]}
+                                        onPress={() => handleUpdateStatus('pending')}
+                                    >
+                                        <Ionicons name="time-outline" size={20} color={task.status === 'pending' ? '#FFF' : '#6366F1'} />
+                                        <Text style={[styles.statusToggleText, task.status === 'pending' && styles.statusToggleTextActive]}>Pending</Text>
+                                    </TouchableOpacity>
+
+                                    <TouchableOpacity
+                                        style={[styles.statusToggleBtn, task.status === 'in_sync' && styles.statusToggleBtnActiveSync]}
+                                        onPress={() => handleUpdateStatus('in_sync')}
+                                    >
+                                        <Ionicons name="sync-outline" size={20} color={task.status === 'in_sync' ? '#FFF' : '#16A34A'} />
+                                        <Text style={[styles.statusToggleText, task.status === 'in_sync' && styles.statusToggleTextActive]}>In Sync</Text>
+                                    </TouchableOpacity>
+                                </View>
+
+                                <View style={styles.statusButtonRow}>
+                                    <TouchableOpacity
+                                        style={[styles.statusToggleBtn, task.status === 'blocked' && styles.statusToggleBtnActiveBlocked]}
+                                        onPress={() => handleUpdateStatus('blocked')}
+                                    >
+                                        <Ionicons name="ban-outline" size={20} color={task.status === 'blocked' ? '#FFF' : '#DC2626'} />
+                                        <Text style={[styles.statusToggleText, task.status === 'blocked' && styles.statusToggleTextActive]}>Blocked</Text>
+                                    </TouchableOpacity>
+
+                                    <TouchableOpacity
+                                        style={[styles.statusToggleBtn, task.status === 'help_requested' && styles.statusToggleBtnActiveHelp]}
+                                        onPress={() => handleUpdateStatus('help_requested')}
+                                    >
+                                        <Ionicons name="help-circle-outline" size={20} color={task.status === 'help_requested' ? '#FFF' : '#EAB308'} />
+                                        <Text style={[styles.statusToggleText, task.status === 'help_requested' && styles.statusToggleTextActive]}>Help</Text>
+                                    </TouchableOpacity>
+                                </View>
+                            </View>
+                        )}
                         <Text style={styles.actionNote}>
-                            Accepting this task will change its status to "In Sync" and notify the project admin.
+                            {task.status === 'pending'
+                                ? 'Accepting this task will change its status to "In Sync" and notify the project admin.'
+                                : 'Update your current work status. Each change will be logged for transparency.'}
                         </Text>
                     </View>
                 )}
@@ -441,16 +543,26 @@ const styles = StyleSheet.create({
         marginRight: 10,
     },
     statusBadge: {
-        backgroundColor: '#EEF2FF',
         paddingHorizontal: 10,
         paddingVertical: 4,
         borderRadius: 6,
+        backgroundColor: '#F3F4F6',
     },
+    statusBadgeSync: { backgroundColor: '#DCFCE7' },
+    statusBadgeBlocked: { backgroundColor: '#FEE2E2' },
+    statusBadgeHelp: { backgroundColor: '#FEF9C3' },
+    statusBadgePending: { backgroundColor: '#EEF2FF' },
+    statusBadgeCompleted: { backgroundColor: '#F3F4F6' },
     statusText: {
         fontSize: 10,
         fontWeight: '800',
-        color: '#6366F1',
+        color: '#6B7280',
     },
+    statusTextSync: { color: '#16A34A' },
+    statusTextBlocked: { color: '#DC2626' },
+    statusTextHelp: { color: '#CA8A04' },
+    statusTextPending: { color: '#6366F1' },
+    statusTextCompleted: { color: '#9CA3AF' },
     infoRow: {
         flexDirection: 'row',
         alignItems: 'center',
@@ -646,4 +758,53 @@ const styles = StyleSheet.create({
     quickBtnActive: { backgroundColor: '#EA580C' },
     quickBtnText: { fontSize: 12, fontWeight: '700', color: '#4B5563' },
     quickBtnTextActive: { color: '#FFF' },
+    sectionHeadingStandardSmall: {
+        fontSize: 14,
+        fontWeight: '800',
+        color: '#374151',
+        marginBottom: 16,
+        alignSelf: 'flex-start',
+    },
+    statusButtonRow: {
+        flexDirection: 'row',
+        justifyContent: 'space-between',
+        width: '100%',
+        gap: 8,
+        marginBottom: 16,
+    },
+    statusToggleBtn: {
+        flex: 1,
+        flexDirection: 'row',
+        alignItems: 'center',
+        justifyContent: 'center',
+        paddingVertical: 12,
+        borderRadius: 10,
+        borderWidth: 1.5,
+        borderColor: '#E5E7EB',
+        gap: 6,
+    },
+    statusToggleBtnActiveSync: {
+        backgroundColor: '#16A34A',
+        borderColor: '#16A34A',
+    },
+    statusToggleBtnActiveBlocked: {
+        backgroundColor: '#DC2626',
+        borderColor: '#DC2626',
+    },
+    statusToggleBtnActiveHelp: {
+        backgroundColor: '#EAB308',
+        borderColor: '#EAB308',
+    },
+    statusToggleBtnActivePending: {
+        backgroundColor: '#6366F1',
+        borderColor: '#6366F1',
+    },
+    statusToggleText: {
+        fontSize: 12,
+        fontWeight: '700',
+        color: '#6B7280',
+    },
+    statusToggleTextActive: {
+        color: '#FFF',
+    },
 });
