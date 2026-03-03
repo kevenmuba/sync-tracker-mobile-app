@@ -83,3 +83,26 @@ create table sync_logs (
 -- Enable real-time for notifications and projects
 alter publication supabase_realtime add table notifications;
 alter publication supabase_realtime add table projects;
+
+
+-- 1. Create the bucket if it doesn't exist
+INSERT INTO storage.buckets (id, name, public) 
+VALUES ('sync-tracker-assets', 'sync-tracker-assets', true)
+ON CONFLICT (id) DO NOTHING;
+
+-- 2. Allow Public Access (So everyone can see profile photos)
+CREATE POLICY "Public Access" 
+ON storage.objects FOR SELECT 
+USING ( bucket_id = 'sync-tracker-assets' );
+
+-- 3. Allow Authenticated Uploads (Users can upload to their own folder)
+CREATE POLICY "Allow Authenticated Uploads" 
+ON storage.objects FOR INSERT 
+TO authenticated 
+WITH CHECK ( bucket_id = 'sync-tracker-assets' );
+
+-- 4. Allow Users to Update/Delete their own files
+CREATE POLICY "Allow Individual Updates" 
+ON storage.objects FOR UPDATE 
+TO authenticated 
+USING ( bucket_id = 'sync-tracker-assets' );

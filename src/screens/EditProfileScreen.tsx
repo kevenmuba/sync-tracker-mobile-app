@@ -52,7 +52,7 @@ export default function EditProfileScreen() {
 
     const pickImage = async () => {
         const result = await ImagePicker.launchImageLibraryAsync({
-            mediaTypes: ImagePicker.MediaTypeOptions.Images,
+            mediaTypes: ['images'],
             allowsEditing: true,
             aspect: [1, 1],
             quality: 0.7,
@@ -69,18 +69,21 @@ export default function EditProfileScreen() {
             const { data: { user } } = await supabase.auth.getUser();
             if (!user) return;
 
-            // Reliable file upload for Expo
-            const response = await fetch(uri);
-            const blob = await response.blob();
-
+            // Reliable file upload for Expo using FormData
             const fileExt = uri.split('.').pop()?.toLowerCase() || 'jpg';
             const fileName = `${user.id}/${Date.now()}.${fileExt}`;
             const filePath = `${fileName}`;
 
+            const formData = new FormData();
+            formData.append('file', {
+                uri,
+                name: fileName,
+                type: `image/${fileExt}`,
+            } as any);
+
             const { error: uploadError } = await supabase.storage
                 .from('sync-tracker-assets')
-                .upload(filePath, blob, {
-                    contentType: `image/${fileExt}`,
+                .upload(filePath, formData, {
                     upsert: true
                 });
 
