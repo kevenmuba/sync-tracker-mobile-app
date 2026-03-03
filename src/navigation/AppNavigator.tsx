@@ -4,12 +4,15 @@ import React from 'react';
 
 import CreateProjectScreen from '../screens/CreateProjectScreen';
 import CreateTaskScreen from '../screens/CreateTaskScreen';
+import EditProfileScreen from '../screens/EditProfileScreen';
 import LoginScreen from '../screens/LoginScreen';
 import NotificationsHistoryScreen from '../screens/NotificationsHistoryScreen';
 import PendingTasksScreen from '../screens/PendingTasksScreen';
+import ProfileStatsScreen from '../screens/ProfileStatsScreen';
 import ProjectAdminPendingScreen from '../screens/ProjectAdminPendingScreen';
 import ProjectsScreen from '../screens/ProjectsScreen';
 import RegisterScreen from '../screens/RegisterScreen';
+import SettingsScreen from '../screens/SettingsScreen';
 import TaskDetailsScreen from '../screens/TaskDetailsScreen';
 import MainTabNavigator from './MainTabNavigator';
 
@@ -29,6 +32,9 @@ export type RootStackParamList = {
     CreateTask: undefined;
     PendingTasks: undefined;
     TaskDetails: { taskId: string; projectAdminId?: string };
+    ProfileStats: undefined;
+    EditProfile: undefined;
+    Settings: undefined;
 };
 
 const Stack = createNativeStackNavigator<RootStackParamList>();
@@ -84,6 +90,9 @@ export default function AppNavigator() {
                     component={TaskDetailsScreen}
                     options={{ headerShown: false }}
                 />
+                <Stack.Screen name="ProfileStats" component={ProfileStatsScreen} />
+                <Stack.Screen name="EditProfile" component={EditProfileScreen} />
+                <Stack.Screen name="Settings" component={SettingsScreen} />
             </Stack.Navigator>
         </NavigationContainer>
     );

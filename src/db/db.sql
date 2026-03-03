@@ -3,6 +3,17 @@ create table if not exists public.users (
   email text,
   full_name text,
   role text check (role in ('super_admin','project_admin','team_member')) default 'team_member',
+  avatar_url text,
+  created_at timestamp default now()
+);
+
+-- Table to track hours spent on tasks
+create table if not exists public.time_logs (
+  id uuid default gen_random_uuid() primary key,
+  task_id uuid references public.tasks(id) on delete cascade,
+  user_id uuid references public.users(id) on delete cascade,
+  hours decimal not null,
+  message text,
   created_at timestamp default now()
 );
 
