@@ -26,7 +26,7 @@ type TaskData = {
     description: string;
     status: string;
     project: { name: string; project_admin: string };
-    owner: { full_name: string };
+    owner: { id: string; full_name: string };
 };
 
 type Participant = {
@@ -65,7 +65,7 @@ export default function TaskDetailsScreen({ route }: Props) {
             // Fetch Task Details
             const { data: taskData, error: taskErr } = await supabase
                 .from('tasks')
-                .select('*, project:projects(name, project_admin), owner:users!responsible_owner(full_name)')
+                .select('*, project:projects(name, project_admin), owner:users!responsible_owner(id, full_name)')
                 .eq('id', taskId)
                 .single();
 
@@ -145,6 +145,40 @@ export default function TaskDetailsScreen({ route }: Props) {
             Alert.alert('Error', error.message || 'Could not add participant.');
         } finally {
             setAdding(false);
+        }
+    };
+
+    const handleAcceptTask = async () => {
+        if (!currentUserId || !task) return;
+
+        try {
+            setLoading(true);
+            // Update status
+            const { error: updateError } = await supabase
+                .from('tasks')
+                .update({ status: 'in_sync' })
+                .eq('id', taskId);
+
+            if (updateError) throw updateError;
+
+            // Create Sync Log
+            const { error: logError } = await supabase
+                .from('sync_logs')
+                .insert({
+                    task_id: taskId,
+                    user_id: currentUserId,
+                    status: 'accepted',
+                    message: 'Task accepted and in sync via details screen',
+                });
+
+            if (logError) throw logError;
+
+            Alert.alert('Success', `You have accepted: "${task.title}"`);
+            fetchData();
+        } catch (error: any) {
+            Alert.alert('Error', error.message || 'Could not accept task');
+        } finally {
+            setLoading(false);
         }
     };
 
@@ -284,6 +318,21 @@ export default function TaskDetailsScreen({ route }: Props) {
                     </View>
                 )}
 
+                {/* Responsible Owner Action: Accept Task */}
+                {task.status === 'pending' && currentUserId === task.owner?.id && (
+                    <View style={styles.actionContainer}>
+                        <TouchableOpacity
+                            style={styles.acceptButton}
+                            onPress={handleAcceptTask}
+                        >
+                            <Ionicons name="checkmark-done-circle-outline" size={24} color="#FFF" />
+                            <Text style={styles.acceptButtonText}>Accept Task</Text>
+                        </TouchableOpacity>
+                        <Text style={styles.actionNote}>
+                            Accepting this task will change its status to "In Sync" and notify the project admin.
+                        </Text>
+                    </View>
+                )}
             </ScrollView>
         </View>
     );
@@ -469,4 +518,40 @@ const styles = StyleSheet.create({
     },
     buttonDisabled: { opacity: 0.7 },
     addButtonText: { color: '#FFF', fontSize: 15, fontWeight: '700' },
+    // Accept Task styles
+    actionContainer: {
+        marginTop: 10,
+        backgroundColor: '#FFFFFF',
+        borderRadius: 16,
+        padding: 24,
+        alignItems: 'center',
+        shadowColor: '#000',
+        shadowOffset: { width: 0, height: 4 },
+        shadowOpacity: 0.03,
+        shadowRadius: 10,
+        elevation: 2,
+    },
+    acceptButton: {
+        backgroundColor: '#16A34A',
+        borderRadius: 14,
+        flexDirection: 'row',
+        alignItems: 'center',
+        justifyContent: 'center',
+        paddingVertical: 16,
+        paddingHorizontal: 32,
+        width: '100%',
+        gap: 12,
+        marginBottom: 12,
+    },
+    acceptButtonText: {
+        color: '#FFF',
+        fontSize: 17,
+        fontWeight: '700',
+    },
+    actionNote: {
+        fontSize: 12,
+        color: '#9CA3AF',
+        textAlign: 'center',
+        lineHeight: 18,
+    },
 });

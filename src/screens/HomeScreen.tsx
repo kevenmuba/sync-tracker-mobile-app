@@ -24,6 +24,7 @@ export default function HomeScreen() {
     const [loadingUser, setLoadingUser] = useState(true);
     const [projectCount, setProjectCount] = useState<number | null>(null);
     const [unreadCount, setUnreadCount] = useState(0);
+    const [pendingCount, setPendingCount] = useState(0);
 
     const getGreeting = () => {
         const hour = new Date().getHours();
@@ -96,9 +97,24 @@ export default function HomeScreen() {
             }
         };
 
+        const fetchTasksCount = async () => {
+            const { data: { user } } = await supabase.auth.getUser();
+            if (user) {
+                const { count } = await supabase
+                    .from('tasks')
+                    .select('*', { count: 'exact', head: true })
+                    .eq('responsible_owner', user.id)
+                    .eq('status', 'pending');
+                if (count !== null) {
+                    setPendingCount(count);
+                }
+            }
+        };
+
         fetchUser();
         fetchCounts();
         fetchNotifications();
+        fetchTasksCount();
     }, []);
 
     const renderSummaryCard = (
@@ -227,6 +243,14 @@ export default function HomeScreen() {
                             projectCount !== null ? projectCount.toString() : '-',
                             'Total Projects',
                             () => navigation.navigate('Projects')
+                        )}
+                        {renderSummaryCard(
+                            'time-outline',
+                            '#EA580C',
+                            '#FFEDD5',
+                            pendingCount.toString(),
+                            'Pending Tasks',
+                            () => navigation.navigate('PendingTasks')
                         )}
                         {renderSummaryCard('clipboard-outline', '#EF4444', '#FEE2E2', '24', 'Total Tasks')}
                         {renderSummaryCard('checkmark-circle-outline', '#22C55E', '#DCFCE7', '18', 'In Sync')}
