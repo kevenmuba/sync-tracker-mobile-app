@@ -84,7 +84,8 @@ export default function CreateTaskScreen() {
                     description: description.trim(),
                     project_id: projectId,
                     responsible_owner: ownerId,
-                    status: 'pending'
+                    status: 'pending',
+                    progress: 0
                 });
 
             if (error) throw error;

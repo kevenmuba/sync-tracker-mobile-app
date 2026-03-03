@@ -16,7 +16,12 @@ import MainTabNavigator from './MainTabNavigator';
 export type RootStackParamList = {
     Login: undefined;
     Register: undefined;
-    Dashboard: undefined; // Points to MainTabNavigator (renamed to avoid duplicate 'Home')
+    Dashboard: { screen?: string } | undefined;
+    Home: undefined;
+    Tasks: undefined;
+    Tree: undefined;
+    Stats: undefined;
+    Profile: undefined;
     CreateProject: undefined;
     Projects: undefined;
     ProjectAdminPending: undefined;

@@ -48,6 +48,7 @@ create table tasks (
   description text,
   responsible_owner uuid references public.users(id),
   status text check (status in ('pending','in_sync','blocked','help_requested','completed')) default 'pending',
+  progress integer default 0 check (progress >= 0 and progress <= 100),
   created_at timestamp default now()
 );
 

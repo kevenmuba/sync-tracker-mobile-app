@@ -18,7 +18,7 @@ import { RootStackParamList } from '../navigation/AppNavigator';
 
 import { supabase } from '../lib/supabase';
 
-const FILTERS = ['All', 'Pending', 'Completed', 'Blocked'];
+const FILTERS = ['All', 'Pending', 'In Sync', 'Blocked', 'Completed'];
 
 export default function TasksScreen() {
     const insets = useSafeAreaInsets();
@@ -80,7 +80,7 @@ export default function TasksScreen() {
             ui.priorityColor = '#16A34A';
             ui.priorityBg = '#DCFCE7';
             ui.footerType = 'progress';
-            ui.progress = 50;
+            ui.progress = task.progress || 0;
         } else if (task.status === 'blocked') {
             ui.priority = 'BLOCKED';
             ui.priorityColor = '#EF4444';

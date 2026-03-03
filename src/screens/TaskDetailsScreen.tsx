@@ -27,6 +27,7 @@ type TaskData = {
     status: string;
     project: { name: string; project_admin: string };
     owner: { id: string; full_name: string };
+    progress: number;
 };
 
 type Participant = {
@@ -182,6 +183,22 @@ export default function TaskDetailsScreen({ route }: Props) {
         }
     };
 
+    const handleUpdateProgress = async (newProgress: number) => {
+        if (!isProjectAdmin) return;
+        try {
+            const { error } = await supabase
+                .from('tasks')
+                .update({ progress: newProgress })
+                .eq('id', taskId);
+
+            if (error) throw error;
+            Alert.alert('Success', `Progress updated to ${newProgress}%`);
+            fetchData();
+        } catch (error: any) {
+            Alert.alert('Error', error.message || 'Could not update progress');
+        }
+    };
+
     if (loading) {
         return (
             <View style={[styles.container, styles.center]}>
@@ -331,6 +348,45 @@ export default function TaskDetailsScreen({ route }: Props) {
                         <Text style={styles.actionNote}>
                             Accepting this task will change its status to "In Sync" and notify the project admin.
                         </Text>
+                    </View>
+                )}
+
+                {/* Project Admin Action: Update Progress */}
+                {isProjectAdmin && task.status === 'in_sync' && (
+                    <View style={styles.adminActionCard}>
+                        <Text style={styles.sectionHeadingStandard}>Update Progress</Text>
+                        <View style={styles.progressUpdateRow}>
+                            <TouchableOpacity
+                                style={styles.progressBtn}
+                                onPress={() => handleUpdateProgress(Math.max(0, (task.progress || 0) - 10))}
+                            >
+                                <Ionicons name="remove-circle-outline" size={32} color="#EA580C" />
+                            </TouchableOpacity>
+
+                            <View style={styles.progressDisplay}>
+                                <Text style={styles.progressPercentText}>{task.progress || 0}%</Text>
+                                <Text style={styles.progressStatusTextLabel}>COMPLETED</Text>
+                            </View>
+
+                            <TouchableOpacity
+                                style={styles.progressBtn}
+                                onPress={() => handleUpdateProgress(Math.min(100, (task.progress || 0) + 10))}
+                            >
+                                <Ionicons name="add-circle-outline" size={32} color="#EA580C" />
+                            </TouchableOpacity>
+                        </View>
+
+                        <View style={styles.quickSelectRow}>
+                            {[0, 25, 50, 75, 100].map(val => (
+                                <TouchableOpacity
+                                    key={val}
+                                    style={[styles.quickBtn, task.progress === val && styles.quickBtnActive]}
+                                    onPress={() => handleUpdateProgress(val)}
+                                >
+                                    <Text style={[styles.quickBtnText, task.progress === val && styles.quickBtnTextActive]}>{val}%</Text>
+                                </TouchableOpacity>
+                            ))}
+                        </View>
                     </View>
                 )}
             </ScrollView>
@@ -554,4 +610,40 @@ const styles = StyleSheet.create({
         textAlign: 'center',
         lineHeight: 18,
     },
+    // Admin Progress 
+    adminActionCard: {
+        marginTop: 20,
+        backgroundColor: '#FFFFFF',
+        borderRadius: 16,
+        padding: 20,
+        shadowColor: '#000',
+        shadowOffset: { width: 0, height: 4 },
+        shadowOpacity: 0.03,
+        shadowRadius: 10,
+        elevation: 2,
+    },
+    progressUpdateRow: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        justifyContent: 'space-between',
+        marginVertical: 16,
+    },
+    progressBtn: { padding: 4 },
+    progressDisplay: { alignItems: 'center' },
+    progressPercentText: { fontSize: 32, fontWeight: '800', color: '#111827' },
+    progressStatusTextLabel: { fontSize: 10, fontWeight: '700', color: '#9CA3AF', letterSpacing: 1 },
+    quickSelectRow: {
+        flexDirection: 'row',
+        justifyContent: 'space-between',
+        marginTop: 10,
+    },
+    quickBtn: {
+        backgroundColor: '#F3F4F6',
+        paddingVertical: 8,
+        paddingHorizontal: 12,
+        borderRadius: 8,
+    },
+    quickBtnActive: { backgroundColor: '#EA580C' },
+    quickBtnText: { fontSize: 12, fontWeight: '700', color: '#4B5563' },
+    quickBtnTextActive: { color: '#FFF' },
 });

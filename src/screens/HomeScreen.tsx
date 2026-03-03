@@ -25,6 +25,11 @@ export default function HomeScreen() {
     const [projectCount, setProjectCount] = useState<number | null>(null);
     const [unreadCount, setUnreadCount] = useState(0);
     const [pendingCount, setPendingCount] = useState(0);
+    const [totalTasks, setTotalTasks] = useState(0);
+    const [inSyncCount, setInSyncCount] = useState(0);
+    const [blockedCount, setBlockedCount] = useState(0);
+    const [activeTasks, setActiveTasks] = useState<any[]>([]);
+    const [loadingTasks, setLoadingTasks] = useState(true);
 
     const getGreeting = () => {
         const hour = new Date().getHours();
@@ -97,24 +102,58 @@ export default function HomeScreen() {
             }
         };
 
-        const fetchTasksCount = async () => {
+        const fetchTasksData = async () => {
             const { data: { user } } = await supabase.auth.getUser();
             if (user) {
-                const { count } = await supabase
+                // Pending Tasks
+                const { count: pending } = await supabase
                     .from('tasks')
                     .select('*', { count: 'exact', head: true })
                     .eq('responsible_owner', user.id)
                     .eq('status', 'pending');
-                if (count !== null) {
-                    setPendingCount(count);
+                setPendingCount(pending || 0);
+
+                // Total Tasks
+                const { count: total } = await supabase
+                    .from('tasks')
+                    .select('*', { count: 'exact', head: true });
+                setTotalTasks(total || 0);
+
+                // In Sync Tasks
+                const { count: insync } = await supabase
+                    .from('tasks')
+                    .select('*', { count: 'exact', head: true })
+                    .eq('status', 'in_sync');
+                setInSyncCount(insync || 0);
+
+                // Blocked Tasks
+                const { count: blocked } = await supabase
+                    .from('tasks')
+                    .select('*', { count: 'exact', head: true })
+                    .eq('status', 'blocked');
+                setBlockedCount(blocked || 0);
+
+                // Active Tasks List (where status is not completed)
+                setLoadingTasks(true);
+                const { data: tasks } = await supabase
+                    .from('tasks')
+                    .select('*, projects(name)')
+                    .eq('responsible_owner', user.id)
+                    .neq('status', 'completed')
+                    .order('created_at', { ascending: false })
+                    .limit(5);
+
+                if (tasks) {
+                    setActiveTasks(tasks);
                 }
+                setLoadingTasks(false);
             }
         };
 
         fetchUser();
         fetchCounts();
         fetchNotifications();
-        fetchTasksCount();
+        fetchTasksData();
     }, []);
 
     const renderSummaryCard = (
@@ -252,9 +291,35 @@ export default function HomeScreen() {
                             'Pending Tasks',
                             () => navigation.navigate('PendingTasks')
                         )}
-                        {renderSummaryCard('clipboard-outline', '#EF4444', '#FEE2E2', '24', 'Total Tasks')}
-                        {renderSummaryCard('checkmark-circle-outline', '#22C55E', '#DCFCE7', '18', 'In Sync')}
-                        {renderSummaryCard('ban-outline', '#EF4444', '#FEE2E2', '2', 'Blocked')}
+                        {renderSummaryCard(
+                            'clipboard-outline',
+                            '#EF4444',
+                            '#FEE2E2',
+                            totalTasks.toString(),
+                            'Total Tasks',
+                            () => navigation.navigate('Tasks')
+                        )}
+                        {renderSummaryCard(
+                            'checkmark-circle-outline',
+                            '#22C55E',
+                            '#DCFCE7',
+                            inSyncCount.toString(),
+                            'In Sync',
+                            () => {
+                                // Potentially navigate with filter In Sync
+                                navigation.navigate('Tasks');
+                            }
+                        )}
+                        {renderSummaryCard(
+                            'ban-outline',
+                            '#EF4444',
+                            '#FEE2E2',
+                            blockedCount.toString(),
+                            'Blocked',
+                            () => {
+                                navigation.navigate('Tasks');
+                            }
+                        )}
                     </View>
                 </View>
 
@@ -262,15 +327,31 @@ export default function HomeScreen() {
                 <View style={styles.section}>
                     <View style={styles.sectionHeaderRow}>
                         <Text style={styles.sectionTitleActive}>My Active Tasks</Text>
-                        <TouchableOpacity>
+                        <TouchableOpacity onPress={() => navigation.navigate('Tasks')}>
                             <Text style={styles.viewAllText}>View all</Text>
                         </TouchableOpacity>
                     </View>
 
-                    {renderTaskCard('Implement Auth Flow', 'Mobile Redesign', 75, 'IN SYNC', 'success')}
-                    {renderTaskCard('API Documentation', 'Backend Integration', 30, 'HELP', 'warning')}
-                    {renderTaskCard('Database Migration', 'Core Infrastructure', 15, 'BLOCKED', 'error')}
-                    {renderTaskCard('UI Component Library', 'Design System', 92, 'IN SYNC', 'success')}
+                    {loadingTasks ? (
+                        <ActivityIndicator color="#EA580C" />
+                    ) : activeTasks.length === 0 ? (
+                        <Text style={styles.emptyText}>No active tasks found.</Text>
+                    ) : (
+                        activeTasks.map((task) => (
+                            <TouchableOpacity
+                                key={task.id}
+                                onPress={() => navigation.navigate('TaskDetails', { taskId: task.id })}
+                            >
+                                {renderTaskCard(
+                                    task.title,
+                                    task.projects?.name || 'Unknown Project',
+                                    task.progress || 0,
+                                    task.status.replace('_', ' ').toUpperCase(),
+                                    task.status === 'in_sync' ? 'success' : task.status === 'blocked' ? 'error' : 'warning'
+                                )}
+                            </TouchableOpacity>
+                        ))
+                    )}
                 </View>
 
             </ScrollView>
@@ -470,4 +551,10 @@ const styles = StyleSheet.create({
         height: '100%',
         borderRadius: 3,
     },
+    emptyText: {
+        fontSize: 14,
+        color: '#9CA3AF',
+        textAlign: 'center',
+        marginTop: 10,
+    }
 });
