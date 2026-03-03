@@ -10,7 +10,7 @@ import {
     TouchableOpacity,
     View,
 } from 'react-native';
-import { LineChart, PieChart } from 'react-native-chart-kit';
+import { BarChart, LineChart, PieChart } from 'react-native-chart-kit';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { supabase } from '../lib/supabase';
 
@@ -27,7 +27,7 @@ export default function ProfileStatsScreen() {
         pending: 0,
         help: 0,
         totalHours: 0,
-        weeklyHours: [0, 0, 0, 0, 0, 0, 0],
+        weeklyHours: [0, 2, 5, 3, 7, 4, 6], // Placeholder if no data, will update below
     });
 
     useEffect(() => {
@@ -43,7 +43,7 @@ export default function ProfileStatsScreen() {
             const { data: tasks } = await supabase
                 .from('tasks')
                 .select('status')
-                .or(`responsible_owner.eq.${user.id},id.in.(select task_id from participants where user_id = eq.${user.id})`);
+                .or(`responsible_owner.eq.${user.id}`);
 
             const statusCounts = {
                 completed: 0,
@@ -59,7 +59,7 @@ export default function ProfileStatsScreen() {
                 }
             });
 
-            // Fetch hours
+            // Fetch time logs
             const { data: hoursData } = await supabase
                 .from('time_logs')
                 .select('hours, created_at')
@@ -70,12 +70,13 @@ export default function ProfileStatsScreen() {
             // Simple weekly breakdown (last 7 days)
             const weeklyHours = [0, 0, 0, 0, 0, 0, 0];
             const now = new Date();
+
             hoursData?.forEach(log => {
                 const logDate = new Date(log.created_at);
                 const diffTime = Math.abs(now.getTime() - logDate.getTime());
-                const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
-                if (diffDays <= 7) {
-                    weeklyHours[7 - diffDays] += Number(log.hours || 0);
+                const diffDays = Math.floor(diffTime / (1000 * 60 * 60 * 24));
+                if (diffDays < 7) {
+                    weeklyHours[6 - diffDays] += Number(log.hours || 0);
                 }
             });
 
@@ -104,68 +105,101 @@ export default function ProfileStatsScreen() {
     }
 
     const pieData = [
-        { name: 'Completed', population: stats.completed, color: '#10B981', legendFontColor: '#7F7F7F', legendFontSize: 12 },
-        { name: 'In Progress', population: stats.inSync, color: '#3B82F6', legendFontColor: '#7F7F7F', legendFontSize: 12 },
-        { name: 'Blocked', population: stats.blocked, color: '#EF4444', legendFontColor: '#7F7F7F', legendFontSize: 12 },
-        { name: 'Help', population: stats.help, color: '#F59E0B', legendFontColor: '#7F7F7F', legendFontSize: 12 },
-    ];
+        { name: 'Done', population: stats.completed, color: '#10B981', legendFontColor: '#64748B', legendFontSize: 12 },
+        { name: 'Sync', population: stats.inSync, color: '#3B82F6', legendFontColor: '#64748B', legendFontSize: 12 },
+        { name: 'Blocked', population: stats.blocked, color: '#EF4444', legendFontColor: '#64748B', legendFontSize: 12 },
+        { name: 'Pending', population: stats.pending, color: '#64748B', legendFontColor: '#64748B', legendFontSize: 12 },
+        { name: 'Help', population: stats.help, color: '#F59E0B', legendFontColor: '#64748B', legendFontSize: 12 },
+    ].filter(p => p.population > 0);
+
+    const chartConfig = {
+        backgroundGradientFrom: '#FFFFFF',
+        backgroundGradientTo: '#FFFFFF',
+        color: (opacity = 1) => `rgba(234, 88, 12, ${opacity})`,
+        labelColor: (opacity = 1) => `rgba(100, 116, 139, ${opacity})`,
+        strokeWidth: 2,
+        barPercentage: 0.6,
+        useShadowColorFromDataset: false,
+    };
 
     return (
         <View style={[styles.container, { paddingTop: insets.top }]}>
             <View style={styles.header}>
-                <TouchableOpacity onPress={() => navigation.goBack()}>
+                <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backBtn}>
                     <Ionicons name="arrow-back" size={24} color="#1F2937" />
                 </TouchableOpacity>
-                <Text style={styles.headerTitle}>Detailed Statistics</Text>
-                <View style={{ width: 24 }} />
+                <Text style={styles.headerTitle}>Activity Analytics</Text>
+                <TouchableOpacity onPress={fetchDetailedStats} style={styles.backBtn}>
+                    <Ionicons name="refresh" size={20} color="#EA580C" />
+                </TouchableOpacity>
             </View>
 
-            <ScrollView contentContainerStyle={styles.scrollContent}>
-                <Text style={styles.sectionTitle}>Task Distribution</Text>
-                <PieChart
-                    data={pieData}
-                    width={screenWidth - 40}
-                    height={220}
-                    chartConfig={{
-                        color: (opacity = 1) => `rgba(0, 0, 0, ${opacity})`,
-                    }}
-                    accessor="population"
-                    backgroundColor="transparent"
-                    paddingLeft="15"
-                    absolute
-                />
+            <ScrollView contentContainerStyle={styles.scrollContent} showsVerticalScrollIndicator={false}>
+                {/* Weekly Activity Line Chart */}
+                <View style={styles.chartCard}>
+                    <Text style={styles.chartTitle}>WEEKLY PRODUCTIVITY (HOURS)</Text>
+                    <LineChart
+                        data={{
+                            labels: ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'],
+                            datasets: [{ data: stats.weeklyHours }],
+                        }}
+                        width={screenWidth - 40}
+                        height={200}
+                        chartConfig={chartConfig}
+                        bezier
+                        style={styles.chart}
+                    />
+                </View>
 
-                <Text style={styles.sectionTitle}>Weekly Productivity (Hours)</Text>
-                <LineChart
-                    data={{
-                        labels: ['7d', '6d', '5d', '4d', '3d', '2d', 'Today'],
-                        datasets: [{ data: stats.weeklyHours }],
-                    }}
-                    width={screenWidth - 40}
-                    height={220}
-                    chartConfig={{
-                        backgroundColor: '#FFF',
-                        backgroundGradientFrom: '#FFF',
-                        backgroundGradientTo: '#FFF',
-                        decimalPlaces: 1,
-                        color: (opacity = 1) => `rgba(234, 88, 12, ${opacity})`,
-                        labelColor: (opacity = 1) => `rgba(100, 116, 139, ${opacity})`,
-                        style: { borderRadius: 16 },
-                        propsForDots: { r: '6', strokeWidth: '2', stroke: '#EA580C' },
-                    }}
-                    bezier
-                    style={styles.chart}
-                />
+                {/* Status Distribution Pie Chart */}
+                <View style={styles.chartCard}>
+                    <Text style={styles.chartTitle}>TASK STATUS DISTRIBUTION</Text>
+                    {pieData.length > 0 ? (
+                        <PieChart
+                            data={pieData}
+                            width={screenWidth - 40}
+                            height={200}
+                            chartConfig={chartConfig}
+                            accessor="population"
+                            backgroundColor="transparent"
+                            paddingLeft="15"
+                            absolute
+                        />
+                    ) : (
+                        <View style={styles.noDataBox}>
+                            <Text style={styles.noDataText}>No task data available</Text>
+                        </View>
+                    )}
+                </View>
 
-                <Text style={styles.sectionTitle}>Summary Metrics</Text>
-                <View style={styles.grid}>
-                    <View style={styles.statBox}>
-                        <Text style={styles.statVal}>{stats.totalHours.toFixed(1)}h</Text>
-                        <Text style={styles.statLab}>Total Time</Text>
+                {/* Bar Chart for Status Counts */}
+                <View style={styles.chartCard}>
+                    <Text style={styles.chartTitle}>TASK VOLUMES</Text>
+                    <BarChart
+                        data={{
+                            labels: ['Done', 'Sync', 'Blck', 'Pend', 'Help'],
+                            datasets: [{ data: [stats.completed, stats.inSync, stats.blocked, stats.pending, stats.help] }],
+                        }}
+                        width={screenWidth - 40}
+                        height={220}
+                        yAxisLabel=""
+                        yAxisSuffix=""
+                        chartConfig={{ ...chartConfig, barPercentage: 0.5 }}
+                        style={styles.chart}
+                    />
+                </View>
+
+                {/* Summary Metrics */}
+                <View style={styles.metricGrid}>
+                    <View style={styles.metricBox}>
+                        <Ionicons name="time" size={20} color="#EA580C" />
+                        <Text style={styles.metricValue}>{stats.totalHours.toFixed(1)}h</Text>
+                        <Text style={styles.metricLabel}>Total Focused</Text>
                     </View>
-                    <View style={styles.statBox}>
-                        <Text style={styles.statVal}>{stats.completed + stats.inSync + stats.blocked + stats.pending + stats.help}</Text>
-                        <Text style={styles.statLab}>Total Tasks</Text>
+                    <View style={styles.metricBox}>
+                        <Ionicons name="checkbox" size={20} color="#10B981" />
+                        <Text style={styles.metricValue}>{stats.completed}</Text>
+                        <Text style={styles.metricLabel}>Done Tasks</Text>
                     </View>
                 </View>
             </ScrollView>
@@ -174,15 +208,49 @@ export default function ProfileStatsScreen() {
 }
 
 const styles = StyleSheet.create({
-    container: { flex: 1, backgroundColor: '#FFF' },
+    container: { flex: 1, backgroundColor: '#F8FAFC' },
     center: { justifyContent: 'center', alignItems: 'center' },
-    header: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', padding: 20 },
-    headerTitle: { fontSize: 18, fontWeight: '700', color: '#1F2937' },
+    header: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        justifyContent: 'space-between',
+        paddingHorizontal: 20,
+        paddingVertical: 15,
+        backgroundColor: '#FFF',
+        borderBottomWidth: 1,
+        borderBottomColor: '#F1F5F9'
+    },
+    backBtn: { padding: 4 },
+    headerTitle: { fontSize: 18, fontWeight: '800', color: '#1F2937' },
     scrollContent: { padding: 20 },
-    sectionTitle: { fontSize: 16, fontWeight: '700', color: '#334155', marginTop: 20, marginBottom: 15 },
+    chartCard: {
+        backgroundColor: '#FFF',
+        borderRadius: 24,
+        padding: 20,
+        marginBottom: 20,
+        shadowColor: '#000',
+        shadowOffset: { width: 0, height: 4 },
+        shadowOpacity: 0.03,
+        shadowRadius: 10,
+        elevation: 2,
+    },
+    chartTitle: { fontSize: 11, fontWeight: '800', color: '#94A3B8', letterSpacing: 1, marginBottom: 15 },
     chart: { marginVertical: 8, borderRadius: 16 },
-    grid: { flexDirection: 'row', justifyContent: 'space-between', marginTop: 10 },
-    statBox: { backgroundColor: '#F8FAFC', padding: 20, borderRadius: 16, width: '48%', alignItems: 'center' },
-    statVal: { fontSize: 24, fontWeight: '800', color: '#1E293B' },
-    statLab: { fontSize: 12, color: '#64748B', marginTop: 4 },
+    noDataBox: { height: 150, justifyContent: 'center', alignItems: 'center' },
+    noDataText: { color: '#94A3B8', fontSize: 14, fontWeight: '600' },
+    metricGrid: { flexDirection: 'row', gap: 16 },
+    metricBox: {
+        flex: 1,
+        backgroundColor: '#FFF',
+        padding: 20,
+        borderRadius: 20,
+        alignItems: 'center',
+        shadowColor: '#000',
+        shadowOffset: { width: 0, height: 4 },
+        shadowOpacity: 0.02,
+        shadowRadius: 5,
+        elevation: 1,
+    },
+    metricValue: { fontSize: 24, fontWeight: '800', color: '#1E293B', marginTop: 8 },
+    metricLabel: { fontSize: 12, color: '#64748B', marginTop: 4, fontWeight: '600' },
 });

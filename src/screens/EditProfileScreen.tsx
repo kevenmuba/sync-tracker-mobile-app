@@ -6,11 +6,12 @@ import {
     ActivityIndicator,
     Alert,
     Image,
+    ScrollView,
     StyleSheet,
     Text,
     TextInput,
     TouchableOpacity,
-    View,
+    View
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { supabase } from '../lib/supabase';
@@ -68,20 +69,20 @@ export default function EditProfileScreen() {
             const { data: { user } } = await supabase.auth.getUser();
             if (!user) return;
 
-            const fileExt = uri.split('.').pop();
-            const fileName = `${user.id}-${Math.random()}.${fileExt}`;
-            const filePath = `avatars/${fileName}`;
+            // Reliable file upload for Expo
+            const response = await fetch(uri);
+            const blob = await response.blob();
 
-            const formData = new FormData();
-            formData.append('file', {
-                uri,
-                name: fileName,
-                type: `image/${fileExt}`,
-            } as any);
+            const fileExt = uri.split('.').pop()?.toLowerCase() || 'jpg';
+            const fileName = `${user.id}/${Date.now()}.${fileExt}`;
+            const filePath = `${fileName}`;
 
             const { error: uploadError } = await supabase.storage
                 .from('sync-tracker-assets')
-                .upload(filePath, formData);
+                .upload(filePath, blob, {
+                    contentType: `image/${fileExt}`,
+                    upsert: true
+                });
 
             if (uploadError) throw uploadError;
 
@@ -108,7 +109,7 @@ export default function EditProfileScreen() {
             const { error } = await supabase
                 .from('users')
                 .update({
-                    full_name: fullName,
+                    full_name: fullName.trim(),
                     avatar_url: avatarUrl
                 })
                 .eq('id', user.id);
@@ -131,55 +132,126 @@ export default function EditProfileScreen() {
         );
     }
 
+    const defaultAvatar = 'https://ui-avatars.com/api/?name=' + encodeURIComponent(fullName || 'User') + '&background=EA580C&color=fff&size=128';
+
     return (
         <View style={[styles.container, { paddingTop: insets.top }]}>
             <View style={styles.header}>
-                <TouchableOpacity onPress={() => navigation.goBack()}>
-                    <Ionicons name="close" size={28} color="#1F2937" />
+                <TouchableOpacity onPress={() => navigation.goBack()} style={styles.headerBtn}>
+                    <Ionicons name="close" size={26} color="#1F2937" />
                 </TouchableOpacity>
                 <Text style={styles.headerTitle}>Edit Profile</Text>
-                <TouchableOpacity onPress={handleSave} disabled={updating}>
+                <TouchableOpacity onPress={handleSave} disabled={updating} style={styles.headerBtn}>
                     {updating ? <ActivityIndicator size="small" color="#EA580C" /> : <Text style={styles.saveBtn}>Save</Text>}
                 </TouchableOpacity>
             </View>
 
-            <View style={styles.content}>
+            <ScrollView contentContainerStyle={styles.content}>
                 <View style={styles.avatarSection}>
-                    <Image
-                        source={{ uri: avatarUrl || `https://i.pravatar.cc/150?u=${fullName}` }}
-                        style={styles.avatar}
-                    />
-                    <TouchableOpacity style={styles.changePicBtn} onPress={pickImage}>
-                        <Text style={styles.changePicText}>Change Profile Photo</Text>
-                    </TouchableOpacity>
+                    <View style={styles.avatarWrapper}>
+                        <Image
+                            source={{ uri: avatarUrl || defaultAvatar }}
+                            style={styles.avatar}
+                        />
+                        <TouchableOpacity style={styles.editIconBtn} onPress={pickImage}>
+                            <Ionicons name="camera" size={20} color="#FFF" />
+                        </TouchableOpacity>
+                    </View>
+                    <Text style={styles.hintText}>Tap camera to change photo</Text>
                 </View>
 
-                <View style={styles.inputGroup}>
-                    <Text style={styles.label}>Full Name</Text>
-                    <TextInput
-                        style={styles.input}
-                        value={fullName}
-                        onChangeText={setFullName}
-                        placeholder="Enter your full name"
-                    />
+                <View style={styles.form}>
+                    <View style={styles.inputGroup}>
+                        <Text style={styles.label}>FULL NAME</Text>
+                        <TextInput
+                            style={styles.input}
+                            value={fullName}
+                            onChangeText={setFullName}
+                            placeholder="e.g. Alex Wong"
+                            placeholderTextColor="#9CA3AF"
+                        />
+                    </View>
+
+                    <View style={styles.infoBox}>
+                        <Ionicons name="information-circle-outline" size={18} color="#64748B" />
+                        <Text style={styles.infoBoxText}>
+                            Your name and profile photo are visible to your team members and project admins.
+                        </Text>
+                    </View>
                 </View>
-            </View>
+            </ScrollView>
         </View>
     );
 }
 
 const styles = StyleSheet.create({
-    container: { flex: 1, backgroundColor: '#FFF' },
+    container: { flex: 1, backgroundColor: '#FFFFFF' },
     center: { justifyContent: 'center', alignItems: 'center' },
-    header: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', padding: 20, borderBottomWidth: 1, borderBottomColor: '#F1F5F9' },
-    headerTitle: { fontSize: 18, fontWeight: '700', color: '#1F2937' },
-    saveBtn: { fontSize: 16, fontWeight: '700', color: '#EA580C' },
+    header: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        justifyContent: 'space-between',
+        paddingHorizontal: 16,
+        paddingVertical: 12,
+        borderBottomWidth: 1,
+        borderBottomColor: '#F1F5F9'
+    },
+    headerBtn: { padding: 8, minWidth: 60 },
+    headerTitle: { fontSize: 17, fontWeight: '700', color: '#1F2937' },
+    saveBtn: { fontSize: 16, fontWeight: '700', color: '#EA580C', textAlign: 'right' },
     content: { padding: 24 },
-    avatarSection: { alignItems: 'center', marginBottom: 32 },
-    avatar: { width: 100, height: 100, borderRadius: 50, marginBottom: 16, backgroundColor: '#F1F5F9' },
-    changePicBtn: {},
-    changePicText: { color: '#EA580C', fontWeight: '600', fontSize: 14 },
-    inputGroup: { marginBottom: 20 },
-    label: { fontSize: 13, fontWeight: '600', color: '#64748B', marginBottom: 8 },
-    input: { backgroundColor: '#F8FAFC', padding: 16, borderRadius: 12, borderWidth: 1, borderColor: '#E2E8F0', fontSize: 15 },
+    avatarSection: { alignItems: 'center', marginBottom: 40 },
+    avatarWrapper: {
+        position: 'relative',
+        marginBottom: 12,
+    },
+    avatar: {
+        width: 120,
+        height: 120,
+        borderRadius: 60,
+        backgroundColor: '#F8FAFC',
+        borderWidth: 1,
+        borderColor: '#F1F5F9'
+    },
+    editIconBtn: {
+        position: 'absolute',
+        bottom: 0,
+        right: 0,
+        backgroundColor: '#EA580C',
+        width: 36,
+        height: 36,
+        borderRadius: 18,
+        justifyContent: 'center',
+        alignItems: 'center',
+        borderWidth: 3,
+        borderColor: '#FFF',
+    },
+    hintText: { fontSize: 13, color: '#94A3B8', fontWeight: '500' },
+    form: { gap: 24 },
+    inputGroup: { gap: 8 },
+    label: { fontSize: 12, fontWeight: '800', color: '#94A3B8', letterSpacing: 0.5 },
+    input: {
+        backgroundColor: '#F8FAFC',
+        padding: 16,
+        borderRadius: 16,
+        borderWidth: 1,
+        borderColor: '#F1F5F9',
+        fontSize: 16,
+        color: '#1E293B',
+        fontWeight: '600'
+    },
+    infoBox: {
+        flexDirection: 'row',
+        backgroundColor: '#F8FAFC',
+        padding: 16,
+        borderRadius: 16,
+        gap: 12,
+        alignItems: 'flex-start',
+    },
+    infoBoxText: {
+        flex: 1,
+        fontSize: 13,
+        color: '#64748B',
+        lineHeight: 18,
+    },
 });

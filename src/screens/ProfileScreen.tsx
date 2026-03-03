@@ -163,6 +163,8 @@ export default function ProfileScreen() {
         );
     }
 
+    const defaultAvatar = `https://ui-avatars.com/api/?name=${encodeURIComponent(userData.fullName || 'User')}&background=EA580C&color=fff&size=200`;
+
     return (
         <View style={[styles.container, { paddingTop: insets.top }]}>
             {/* Header */}
@@ -185,7 +187,7 @@ export default function ProfileScreen() {
                 <View style={styles.profileHeader}>
                     <View style={styles.avatarContainer}>
                         <Image
-                            source={{ uri: userData.avatarUrl || `https://i.pravatar.cc/150?u=${userData.fullName}` }}
+                            source={{ uri: userData.avatarUrl || defaultAvatar }}
                             style={styles.profileAvatar}
                         />
                         <View style={styles.statusOnlineDot} />
