@@ -107,12 +107,19 @@ export default function TasksScreen() {
     };
 
     const filteredTasks = tasks.filter(t => {
-        if (activeFilter !== 'All' && t.status.toLowerCase() !== activeFilter.toLowerCase()) {
-            return false;
+        if (activeFilter !== 'All') {
+            const normalizedStatus = t.status.toLowerCase().replace('_', ' ');
+            const normalizedFilter = activeFilter.toLowerCase().replace('_', ' ');
+            if (normalizedStatus !== normalizedFilter) return false;
         }
         if (searchQuery.trim()) {
             const query = searchQuery.toLowerCase();
-            return t.title.toLowerCase().includes(query) || t.project?.name?.toLowerCase().includes(query);
+            const titleMatch = t.title?.toLowerCase().includes(query);
+            const descMatch = t.description?.toLowerCase().includes(query);
+            const projectMatch = t.project?.name?.toLowerCase().includes(query);
+            const ownerMatch = t.owner?.full_name?.toLowerCase().includes(query);
+
+            return titleMatch || descMatch || projectMatch || ownerMatch;
         }
         return true;
     });
