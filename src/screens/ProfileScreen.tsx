@@ -61,24 +61,54 @@ export default function ProfileScreen() {
             });
 
             // 2. Fetch Stats
-            // Completed Tasks (where user is owner or participant)
-            const { data: userTasks } = await supabase
+            // Tasks (where user is owner OR participant)
+            // First, get tasks where user is owner
+            const { data: ownedTasks } = await supabase
                 .from('tasks')
-                .select('status, progress')
+                .select('id, status, progress')
                 .eq('responsible_owner', user.id);
 
-            const compCountNum = userTasks?.filter(t => t.status === 'completed').length || 0;
-            const progCountNum = userTasks?.filter(t =>
+            // Second, get tasks where user is a participant
+            const { data: participatedParts } = await supabase
+                .from('participants')
+                .select('task_id')
+                .eq('user_id', user.id);
+
+            const participatedTaskIds = (participatedParts || []).map(p => p.task_id);
+            let participatedTasks: any[] = [];
+            if (participatedTaskIds.length > 0) {
+                const { data: pTasks } = await supabase
+                    .from('tasks')
+                    .select('id, status, progress')
+                    .in('id', participatedTaskIds);
+                if (pTasks) participatedTasks = pTasks;
+            }
+
+            // Combine and de-duplicate tasks
+            const allUserTasks = [...(ownedTasks || [])];
+            participatedTasks.forEach(pt => {
+                if (!allUserTasks.find(ot => ot.id === pt.id)) {
+                    allUserTasks.push(pt);
+                }
+            });
+
+            const compCountNum = allUserTasks.filter(t => t.status === 'completed').length || 0;
+            const progCountNum = allUserTasks.filter(t =>
                 t.status !== 'completed' && (t.status === 'in_sync' || (t.progress || 0) > 0)
             ).length || 0;
 
             // Total Hours
-            const { data: hoursData } = await supabase
+            const { data: hoursData, error: hoursError } = await supabase
                 .from('time_logs')
                 .select('hours')
                 .eq('user_id', user.id);
 
-            const totalHours = hoursData?.reduce((acc, curr) => acc + Number(curr.hours || 0), 0) || 0;
+            if (hoursError) console.error('Error fetching hours:', hoursError);
+
+            const totalHours = (hoursData || []).reduce((acc, curr) => {
+                const h = parseFloat(String(curr.hours || 0));
+                return acc + (isNaN(h) ? 0 : h);
+            }, 0);
 
             setStats({
                 completed: compCountNum,

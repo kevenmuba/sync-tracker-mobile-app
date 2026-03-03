@@ -41,10 +41,35 @@ export default function ProfileStatsScreen() {
             if (!user) return;
 
             // Fetch tasks by status
-            const { data: tasks } = await supabase
+            // Owned Tasks
+            const { data: ownedTasks } = await supabase
                 .from('tasks')
-                .select('status')
+                .select('id, status')
                 .eq('responsible_owner', user.id);
+
+            // Participated tasks
+            const { data: partEntries } = await supabase
+                .from('participants')
+                .select('task_id')
+                .eq('user_id', user.id);
+
+            const participatedTaskIds = (partEntries || []).map(p => p.task_id);
+            let participatedTasks: any[] = [];
+            if (participatedTaskIds.length > 0) {
+                const { data: pTasks } = await supabase
+                    .from('tasks')
+                    .select('id, status')
+                    .in('id', participatedTaskIds);
+                if (pTasks) participatedTasks = pTasks;
+            }
+
+            // Combine and de-duplicate
+            const allTasks = [...(ownedTasks || [])];
+            participatedTasks.forEach(pt => {
+                if (!allTasks.find(ot => ot.id === pt.id)) {
+                    allTasks.push(pt);
+                }
+            });
 
             const statusCounts = {
                 completed: 0,
@@ -54,19 +79,24 @@ export default function ProfileStatsScreen() {
                 help_requested: 0,
             };
 
-            tasks?.forEach(t => {
+            allTasks.forEach(t => {
                 if (statusCounts.hasOwnProperty(t.status)) {
                     statusCounts[t.status as keyof typeof statusCounts]++;
                 }
             });
 
             // Fetch time logs
-            const { data: hoursData } = await supabase
+            const { data: hoursData, error: hoursError } = await supabase
                 .from('time_logs')
                 .select('hours, created_at')
                 .eq('user_id', user.id);
 
-            const totalHours = hoursData?.reduce((acc, curr) => acc + Number(curr.hours || 0), 0) || 0;
+            if (hoursError) console.error('Error fetching weekly hours:', hoursError);
+
+            const totalHours = (hoursData || []).reduce((acc, curr) => {
+                const h = parseFloat(String(curr.hours || 0));
+                return acc + (isNaN(h) ? 0 : h);
+            }, 0);
 
             // Simple weekly breakdown (last 7 days)
             const weeklyHours = [0, 0, 0, 0, 0, 0, 0];
@@ -77,7 +107,8 @@ export default function ProfileStatsScreen() {
                 const diffTime = Math.abs(now.getTime() - logDate.getTime());
                 const diffDays = Math.floor(diffTime / (1000 * 60 * 60 * 24));
                 if (diffDays < 7) {
-                    weeklyHours[6 - diffDays] += Number(log.hours || 0);
+                    const hVal = parseFloat(String(log.hours || 0));
+                    weeklyHours[6 - diffDays] += (isNaN(hVal) ? 0 : hVal);
                 }
             });
 

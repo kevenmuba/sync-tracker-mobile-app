@@ -28,6 +28,7 @@ export default function HomeScreen() {
     const [totalTasks, setTotalTasks] = useState(0);
     const [inSyncCount, setInSyncCount] = useState(0);
     const [blockedCount, setBlockedCount] = useState(0);
+    const [completedCount, setCompletedCount] = useState(0);
     const [activeTasks, setActiveTasks] = useState<any[]>([]);
     const [loadingTasks, setLoadingTasks] = useState(true);
     const [userAvatar, setUserAvatar] = useState<string | null>(null);
@@ -139,6 +140,13 @@ export default function HomeScreen() {
                     .select('*', { count: 'exact', head: true })
                     .eq('status', 'blocked');
                 setBlockedCount(blocked || 0);
+
+                // Completed Tasks
+                const { count: completed } = await supabase
+                    .from('tasks')
+                    .select('*', { count: 'exact', head: true })
+                    .eq('status', 'completed');
+                setCompletedCount(completed || 0);
 
                 // Active Tasks List (where status is not completed)
                 setLoadingTasks(true);
@@ -323,6 +331,16 @@ export default function HomeScreen() {
                             '#FEE2E2',
                             blockedCount.toString(),
                             'Blocked',
+                            () => {
+                                navigation.navigate('Tasks');
+                            }
+                        )}
+                        {renderSummaryCard(
+                            'checkmark-done-circle-outline',
+                            '#10B981',
+                            '#D1FAE5',
+                            completedCount.toString(),
+                            'Completed',
                             () => {
                                 navigation.navigate('Tasks');
                             }

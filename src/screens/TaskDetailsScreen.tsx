@@ -11,6 +11,7 @@ import {
     ScrollView,
     StyleSheet,
     Text,
+    TextInput,
     TouchableOpacity,
     View
 } from 'react-native';
@@ -30,6 +31,13 @@ type TaskData = {
     progress: number;
 };
 
+type TimeLog = {
+    id: string;
+    hours: number;
+    message: string;
+    created_at: string;
+};
+
 type Participant = {
     id: string;
     role: string;
@@ -45,6 +53,7 @@ export default function TaskDetailsScreen({ route }: Props) {
 
     const [task, setTask] = useState<TaskData | null>(null);
     const [participants, setParticipants] = useState<Participant[]>([]);
+    const [timeLogs, setTimeLogs] = useState<TimeLog[]>([]);
     const [availableUsers, setAvailableUsers] = useState<UserOption[]>([]);
     const [loading, setLoading] = useState(true);
 
@@ -56,6 +65,11 @@ export default function TaskDetailsScreen({ route }: Props) {
     const [selectedUser, setSelectedUser] = useState('');
     const [selectedRole, setSelectedRole] = useState('contributor');
     const [adding, setAdding] = useState(false);
+
+    // Log Hours state
+    const [inputHours, setInputHours] = useState('');
+    const [inputMessage, setInputMessage] = useState('');
+    const [logging, setLogging] = useState(false);
 
     const fetchData = async () => {
         try {
@@ -95,6 +109,17 @@ export default function TaskDetailsScreen({ route }: Props) {
                     .from('users')
                     .select('id, full_name');
                 if (usersData) setAvailableUsers(usersData);
+            }
+
+            // Fetch Time Logs for this task
+            const { data: logs } = await supabase
+                .from('time_logs')
+                .select('*')
+                .eq('task_id', taskId)
+                .order('created_at', { ascending: false });
+
+            if (logs) {
+                setTimeLogs(logs as TimeLog[]);
             }
         } catch (error) {
             console.error(error);
@@ -263,6 +288,38 @@ export default function TaskDetailsScreen({ route }: Props) {
             Alert.alert('Error', error.message || 'Could not update status');
         } finally {
             setLoading(false);
+        }
+    };
+
+    const handleLogHours = async () => {
+        if (!inputHours || isNaN(Number(inputHours))) {
+            Alert.alert('Error', 'Please enter a valid number of hours.');
+            return;
+        }
+
+        if (!currentUserId) return;
+
+        setLogging(true);
+        try {
+            const { error } = await supabase
+                .from('time_logs')
+                .insert({
+                    task_id: taskId,
+                    user_id: currentUserId,
+                    hours: Number(inputHours),
+                    message: inputMessage || 'Work on task'
+                });
+
+            if (error) throw error;
+
+            Alert.alert('Success', 'Hours logged successfully!');
+            setInputHours('');
+            setInputMessage('');
+            fetchData(); // Refresh logs and indirectly stats
+        } catch (error: any) {
+            Alert.alert('Error', error.message || 'Could not log hours');
+        } finally {
+            setLogging(false);
         }
     };
 
@@ -483,6 +540,78 @@ export default function TaskDetailsScreen({ route }: Props) {
                                 ? 'Accepting this task will change its status to "In Sync" and notify the project admin.'
                                 : 'Update your current work status. Each change will be logged for transparency.'}
                         </Text>
+                    </View>
+                )}
+
+                {/* Log Hours (Task Owner or Admin) */}
+                {(isProjectAdmin || currentUserId === task.owner?.id) && (
+                    <View style={styles.logHoursCard}>
+                        <Text style={styles.sectionHeadingStandard}>Log Hours</Text>
+                        <View style={styles.logInputRow}>
+                            <View style={[styles.inputGroup, { flex: 1, marginRight: 12 }]}>
+                                <Text style={styles.label}>Hours</Text>
+                                <View style={styles.pickerContainer}>
+                                    <View style={{ paddingHorizontal: 16, height: 50, justifyContent: 'center' }}>
+                                        <TextInput
+                                            placeholder="e.g. 2.5"
+                                            value={inputHours}
+                                            onChangeText={setInputHours}
+                                            keyboardType="decimal-pad"
+                                            style={{ color: '#1F2937', fontSize: 16 }}
+                                        />
+                                    </View>
+                                </View>
+                            </View>
+                        </View>
+                        <View style={styles.inputGroup}>
+                            <Text style={styles.label}>What did you work on?</Text>
+                            <View style={[styles.pickerContainer, { height: 80, padding: 12 }]}>
+                                <TextInput
+                                    placeholder="Brief description of work..."
+                                    value={inputMessage}
+                                    onChangeText={setInputMessage}
+                                    multiline
+                                    style={{ color: '#1F2937', fontSize: 14, height: '100%' }}
+                                    textAlignVertical="top"
+                                />
+                            </View>
+                        </View>
+                        <TouchableOpacity
+                            style={[styles.logButton, logging && styles.buttonDisabled]}
+                            onPress={handleLogHours}
+                            disabled={logging}
+                        >
+                            {logging ? (
+                                <ActivityIndicator color="#FFF" />
+                            ) : (
+                                <>
+                                    <Ionicons name="time-outline" size={20} color="#FFF" />
+                                    <Text style={styles.logButtonText}>Log Hours</Text>
+                                </>
+                            )}
+                        </TouchableOpacity>
+                    </View>
+                )}
+
+                {/* Time Logs List */}
+                <Text style={styles.sectionHeadingStandard}>Time Logs</Text>
+                {timeLogs.length === 0 ? (
+                    <Text style={styles.emptyText}>No hours logged for this task yet.</Text>
+                ) : (
+                    <View style={styles.logsContainer}>
+                        {timeLogs.map((log, index) => (
+                            <View key={log.id} style={styles.logCard}>
+                                <View style={styles.logHeader}>
+                                    <View style={styles.logHoursBadge}>
+                                        <Text style={styles.logHoursText}>{log.hours}h</Text>
+                                    </View>
+                                    <Text style={styles.logDate}>
+                                        {new Date(log.created_at).toLocaleDateString()}
+                                    </Text>
+                                </View>
+                                <Text style={styles.logMessage}>{log.message}</Text>
+                            </View>
+                        ))}
                     </View>
                 )}
 
@@ -843,5 +972,75 @@ const styles = StyleSheet.create({
     },
     statusToggleTextActive: {
         color: '#FFF',
+    },
+    logHoursCard: {
+        backgroundColor: '#FFFFFF',
+        borderRadius: 16,
+        padding: 20,
+        marginBottom: 24,
+        shadowColor: '#000',
+        shadowOffset: { width: 0, height: 4 },
+        shadowOpacity: 0.03,
+        shadowRadius: 10,
+        elevation: 2,
+    },
+    logInputRow: {
+        flexDirection: 'row',
+        alignItems: 'center',
+    },
+    logButton: {
+        backgroundColor: '#EA580C',
+        borderRadius: 10,
+        flexDirection: 'row',
+        alignItems: 'center',
+        justifyContent: 'center',
+        paddingVertical: 14,
+        marginTop: 8,
+        gap: 8,
+    },
+    logButtonText: {
+        color: '#FFF',
+        fontSize: 15,
+        fontWeight: '700',
+    },
+    logsContainer: {
+        marginBottom: 40,
+    },
+    logCard: {
+        backgroundColor: '#FFF',
+        borderRadius: 12,
+        padding: 16,
+        marginBottom: 12,
+        borderWidth: 1,
+        borderColor: '#E5E7EB',
+    },
+    logHeader: {
+        flexDirection: 'row',
+        justifyContent: 'space-between',
+        alignItems: 'center',
+        marginBottom: 8,
+    },
+    logHoursBadge: {
+        backgroundColor: '#FFF7ED',
+        paddingHorizontal: 10,
+        paddingVertical: 4,
+        borderRadius: 6,
+        borderWidth: 1,
+        borderColor: '#FFEDD5',
+    },
+    logHoursText: {
+        fontSize: 14,
+        fontWeight: '800',
+        color: '#EA580C',
+    },
+    logDate: {
+        fontSize: 12,
+        color: '#94A3B8',
+        fontWeight: '500',
+    },
+    logMessage: {
+        fontSize: 14,
+        color: '#4B5563',
+        lineHeight: 20,
     },
 });

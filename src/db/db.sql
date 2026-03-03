@@ -106,3 +106,26 @@ CREATE POLICY "Allow Individual Updates"
 ON storage.objects FOR UPDATE 
 TO authenticated 
 USING ( bucket_id = 'sync-tracker-assets' );
+
+-- RLS for time_logs
+ALTER TABLE public.time_logs ENABLE ROW LEVEL SECURITY;
+
+CREATE POLICY "Users can view their own time logs"
+ON public.time_logs FOR SELECT
+TO authenticated
+USING (user_id = auth.uid());
+
+CREATE POLICY "Users can insert their own time logs"
+ON public.time_logs FOR INSERT
+TO authenticated
+WITH CHECK (user_id = auth.uid());
+
+CREATE POLICY "Admins can view all time logs"
+ON public.time_logs FOR SELECT
+TO authenticated
+USING (
+  EXISTS (
+    SELECT 1 FROM public.users
+    WHERE id = auth.uid() AND role IN ('super_admin', 'project_admin')
+  )
+);
